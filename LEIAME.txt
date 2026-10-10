@@ -1,0 +1,27 @@
+SIMULACAO HACK - versao programa (Electron)
+
+REQUISITO: instalar o Node.js (versao LTS) em https://nodejs.org
+
+TESTAR (abre o programa numa janela):
+  1. Abra o terminal (cmd) dentro desta pasta
+  2. npm install
+  3. npm start
+
+GERAR O .EXE (arquivo unico, portatil, sem instalar):
+  npm run build
+  O arquivo aparece na pasta dist/ (Simulacao Hack ... .exe)
+
+ATUALIZAR O JOGO:
+  Substitua app/index.html pelo novo HTML (mantenha o nome index.html)
+  e rode npm start ou npm run build de novo.
+
+ATALHOS: F11 = tela cheia | Ctrl+Shift+I = ferramentas de debug
+
+GERAR O EXE PELO GITHUB (sem instalar nada):
+  A pasta .github fica oculta no Windows. Se nao aparecer, use o arquivo GITHUB-build.yml.txt:
+  1. No seu repositorio no GitHub: Add file > Create new file
+  2. No campo do nome digite exatamente:  .github/workflows/build.yml
+     (ao digitar as barras o GitHub cria as pastas sozinho)
+  3. Cole la dentro o conteudo de GITHUB-build.yml.txt e clique em Commit
+  4. Envie tambem os outros arquivos (app/, main.js, package.json)
+  5. Aba Actions > Gerar EXE > Run workflow > baixe o .exe em Artifacts

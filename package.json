@@ -1,0 +1,30 @@
+{
+  "name": "simulacao-hack",
+  "version": "1.0.0",
+  "description": "Simulacao Hack por Caio",
+  "main": "main.js",
+  "author": "Caio",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.caio.simulacaohack",
+    "productName": "Simulacao Hack",
+    "files": [
+      "main.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
