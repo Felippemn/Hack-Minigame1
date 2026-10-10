@@ -1,0 +1,3147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>hack_minigame — demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%;
+    background: #0b0d10;
+    overflow: hidden;
+    font-family: "Consolas", "DejaVu Sans Mono", "Courier New", monospace;
+}
+
+.hidden { display: none !important; }
+
+body.size-pequeno {
+    --ipad-width: 980px; --ipad-height: 600px;
+}
+body.size-medio {
+    --ipad-width: 1380px; --ipad-height: 840px;
+}
+body.size-grande {
+    --ipad-width: 1780px; --ipad-height: 1040px;
+}
+
+.wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 98vw;
+}
+
+:root {
+    --sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Consolas", "DejaVu Sans Mono", "Courier New", monospace;
+    --desk-a: #1d416c; --desk-b: #15325a;
+    --bar: #3a3d42; --bar-off: #2f3236; --bar-edge: #565b62;
+    --panel: #17191c; --panel-2: #1f2226; --line: #2d3136;
+    --text: #e8e8ea; --muted: #8d949c;
+    --accent: #5b9bd5; --ok: #6fcf8e; --warn: #e0b04a; --bad: #ef6b6b;
+}
+
+* { scrollbar-width: thin; scrollbar-color: #3a3f46 transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #3a3f46; border-radius: 5px; }
+
+.credit {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: #6b7480;
+    user-select: none;
+}
+
+.modebar-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 18px;
+}
+.modebar {
+    display: flex; align-items: center; flex-wrap: wrap; justify-content: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    user-select: none;
+}
+.modebar span.label { margin-right: 2px; }
+.modebar button {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: #d5d9de;
+    background: #1b1f24;
+    border: 1px solid #333a42;
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.modebar button:hover { background: #242a31; }
+.modebar button.active { border-color: var(--accent); color: #9cc3ea; }
+
+/* ---- tablet ---- */
+.ipad {
+    position: relative;
+    width: var(--ipad-width, 720px);
+    height: var(--ipad-height, 960px);
+    max-width: 98vw;
+    max-height: 92vh;
+    background: #0e0e10;
+    border-radius: 34px;
+    padding: 16px;
+    box-shadow: 0 0 0 1px #2a2a2e, 0 24px 70px rgba(0,0,0,.7);
+    display: flex;
+    flex-direction: column;
+}
+.ipad-cam {
+    position: absolute;
+    top: 7px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #050506;
+    box-shadow: 0 0 0 1px #2c2c2e;
+}
+.ipad-screen {
+    position: relative;
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, var(--desk-a), var(--desk-b));
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ipad-workspace { flex: 1; min-height: 0; position: relative; }
+.ipad-desktop { position: absolute; inset: 0; overflow: hidden; }
+
+/* ---- janelas flutuantes ---- */
+.ipad-window {
+    position: absolute;
+    min-width: 260px; min-height: 140px;
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--bar-edge);
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    overflow: hidden;
+}
+.app-topbar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 8px;
+    height: 28px;
+    padding: 0 2px 0 9px;
+    background: var(--bar);
+    border-bottom: 1px solid #2a2d31;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+}
+.ipad-window:not(.focused) .app-topbar { background: var(--bar-off); }
+.app-title-ico { display: inline-flex; width: 14px; height: 14px; flex: 0 0 auto; }
+.app-title-ico svg { width: 14px; height: 14px; display: block; }
+.app-title {
+    flex: 1; min-width: 0;
+    font: 12.5px var(--sans);
+    color: #f1f1f1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ipad-window:not(.focused) .app-title { color: #b4b9bf; }
+.app-ctl {
+    flex: 0 0 auto;
+    width: 28px; height: 22px;
+    font: 13px var(--sans);
+    color: #e8e8ea;
+    background: transparent; border: none;
+    cursor: pointer;
+}
+.app-ctl:hover { background: #4d5157; }
+.app-ctl-x:hover { background: #c0392b; }
+
+/* alcas de redimensionamento: 4 bordas + 4 cantos */
+.rz { position: absolute; z-index: 6; touch-action: none; }
+.rz-n  { top: 0;    left: 8px;  right: 40px; height: 4px; cursor: ns-resize; }
+.rz-s  { bottom: 0; left: 14px; right: 14px; height: 6px; cursor: ns-resize; }
+.rz-e  { right: 0;  top: 28px;  bottom: 14px; width: 6px; cursor: ew-resize; }
+.rz-w  { left: 0;   top: 28px;  bottom: 14px; width: 6px; cursor: ew-resize; }
+.rz-ne { top: 0;    right: 0;   width: 6px;  height: 6px;  cursor: nesw-resize; }
+.rz-nw { top: 0;    left: 0;    width: 10px; height: 10px; cursor: nwse-resize; }
+.rz-sw { bottom: 0; left: 0;    width: 14px; height: 14px; cursor: nesw-resize; }
+.rz-se { bottom: 0; right: 0;   width: 16px; height: 16px; cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 52%, #7b838c 52%, #7b838c 60%,
+        transparent 60%, transparent 72%, #7b838c 72%, #7b838c 80%, transparent 80%); }
+
+/* ---- icones da area de trabalho ---- */
+.desktop-icons {
+    position: absolute;
+    left: 10px; right: 130px; top: 8px;
+    display: flex; flex-direction: row; flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 6px;
+    z-index: 1;
+}
+.desk-icon {
+    width: 78px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 6px 2px 5px;
+    background: transparent; border: 1px solid transparent; border-radius: 6px;
+    cursor: pointer;
+    color: #f1f4f8;
+}
+.desk-icon:hover { background: rgba(255,255,255,.08); }
+.desk-ico {
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(12,22,38,.55);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 10px;
+}
+.desk-ico svg { width: 28px; height: 28px; display: block; }
+.desk-label {
+    font: 12px/1.2 var(--sans);
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+.desk-icon.open .desk-ico { border-color: var(--accent); }
+.desk-icon.open .desk-label { color: #fff; font-weight: 600; }
+.desk-icon.focused { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); }
+
+.desktop-tray {
+    position: absolute; right: 14px; top: 14px;
+    display: flex; align-items: center; gap: 8px;
+    font: 12px var(--sans); color: #c5cbd2;
+    user-select: none; pointer-events: none;
+}
+.task-signal { width: 14px; height: 12px; }
+
+/* ---- terminais ---- */
+#terminal, #terminal2, #wifihack-terminal {
+    flex: 1; min-height: 0; width: 100%;
+    display: flex; flex-direction: column;
+    background: #0d0e10;
+    overflow: hidden;
+}
+.titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 10px;
+    background: #141619;
+    border-bottom: 1px solid var(--line);
+    font: 11.5px var(--sans);
+    color: var(--muted);
+    user-select: none;
+}
+.titlebar-hint { color: #5d646c; }
+
+.screen {
+    position: relative; flex: 1; min-height: 0;
+    padding: 10px 12px 12px;
+    overflow-y: auto;
+    font: 14px/1.45 var(--mono);
+    color: #dcdcde;
+    cursor: text;
+    user-select: text;
+}
+.output { white-space: pre-wrap; word-break: break-word; }
+
+.line { min-height: 1.45em; }
+.line.dim     { color: #8d949c; }
+.line.error   { color: #ef7b7b; }
+.line.success { color: #7fd69a; }
+.line.echo    { color: #b9bec5; }
+.line.host    { color: #9cc3ea; }
+.line.folder, .line.file, .line.junk { color: #e4e4e6; padding-left: 24px; position: relative; }
+.line.folder::before {
+    content: ""; position: absolute; left: 4px; top: .3em;
+    width: 15px; height: 11px;
+    background: #e2b53f; border-radius: 1px 3px 1px 1px;
+}
+.line.folder::after {
+    content: ""; position: absolute; left: 4px; top: .2em;
+    width: 7px; height: 3px;
+    background: #e2b53f; border-radius: 2px 2px 0 0;
+}
+.line.file::before, .line.junk::before {
+    content: ""; position: absolute; left: 6px; top: .2em;
+    width: 11px; height: 14px;
+    background: #f2f2f2;
+    clip-path: polygon(0 0, 62% 0, 100% 28%, 100% 100%, 0 100%);
+}
+.line.junk::before { background: #8d949c; }
+
+.inputline { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+.prompt { color: #9aa1a8; white-space: nowrap; }
+#cmdline, #cmdline2, #cmdline3 {
+    flex: 1; min-width: 0;
+    background: transparent; border: none; outline: none;
+    color: #f1f1f3; caret-color: #f1f1f3;
+    font: inherit; padding: 0;
+}
+#cmdline::placeholder, #cmdline2::placeholder, #cmdline3::placeholder { color: #5d646c; }
+
+.deliver-wrap { margin-top: 4px; }
+.deliver-btn {
+    font: 12.5px var(--sans); font-weight: 600;
+    color: #14211a; background: #7fd69a;
+    border: 1px solid #5cb97b; border-radius: 2px;
+    padding: 6px 14px; cursor: pointer;
+}
+.deliver-btn:hover { background: #95e0ac; }
+.deliver-btn:disabled { opacity: .6; cursor: default; }
+
+/* ---- monitor de deteccao ---- */
+#terminal2 { background: #15181c; }
+.doxxbar-wrap { padding: 12px 12px 6px; background: #15181c; }
+.doxxbar-label {
+    display: flex; justify-content: space-between;
+    font: 12px var(--sans); color: #c5cbd2;
+    margin-bottom: 6px;
+}
+.doxxbar-track {
+    width: 100%; height: 22px;
+    background: #0f1114;
+    border: 1px solid #333a42;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.doxxbar-fill {
+    height: 100%; width: 0%;
+    background: #4a84c4;
+    transition: width .35s ease, background .25s ease;
+}
+
+/* ---- bloco de notas ---- */
+#notepad {
+    flex: 1; min-height: 0; width: 100%;
+    display: flex; flex-direction: column;
+    background: #d8d0d0;
+    overflow: hidden;
+}
+#notepad .titlebar { background: #c3baba; border-bottom: 1px solid #a89f9f; color: #3d3838; }
+#notepad .titlebar-text { color: #3d3838; }
+#notepad-clear {
+    font: 11.5px var(--sans);
+    color: #3d3838; background: #d8d0d0;
+    border: 1px solid #9d9494; border-radius: 2px;
+    padding: 2px 9px; cursor: pointer;
+}
+#notepad-clear:hover { background: #e4dddd; }
+#notepad-text {
+    flex: 1; resize: none;
+    border: none; outline: none;
+    background: transparent;
+    padding: 10px 12px;
+    font: 13.5px/1.55 var(--mono);
+    color: #1c1a1a; caret-color: #1c1a1a;
+}
+#notepad-text::placeholder { color: #857c7c; }
+
+/* ---- apps de lista (Wi-Fi) ---- */
+.wifi-app {
+    flex: 1; min-height: 0; width: 100%;
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    overflow: hidden;
+}
+.wifi-app-header { flex: 0 0 auto; padding: 10px 14px 6px; font: 12px var(--sans); color: var(--muted); user-select: none; }
+.wifi-list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 12px 14px; }
+.wifi-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font: 13px/1.6 var(--sans);
+    text-align: center; padding: 24px;
+}
+.wifi-row {
+    border: 1px solid var(--line); border-radius: 3px;
+    padding: 9px 11px; margin-bottom: 7px;
+    background: var(--panel-2);
+}
+.wifi-row-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wifi-ssid { font: 13.5px var(--sans); color: var(--text); }
+.wifi-security {
+    flex: 0 0 auto;
+    font: 11px var(--sans); color: var(--muted);
+    border: 1px solid #3a4047; border-radius: 2px;
+    padding: 1px 6px; white-space: nowrap;
+}
+.wifi-security.open { color: var(--muted); border-color: #3a4047; }
+.wifi-meta { font: 11.5px var(--sans); color: var(--muted); margin-top: 3px; }
+.wifi-status { font: 11.5px var(--sans); margin-top: 5px; }
+.wifi-status.connected { color: var(--ok); }
+.wifi-status.locked { color: var(--warn); }
+.wifi-actions { margin-top: 9px; display: flex; gap: 6px; align-items: center; }
+.wifi-btn, .tutorial-nav-btn, .tutorial-train-btn {
+    flex: 0 0 auto;
+    font: 12px var(--sans);
+    color: var(--text); background: #2b3138;
+    border: 1px solid #444c55; border-radius: 2px;
+    padding: 4px 11px; cursor: pointer; white-space: nowrap;
+}
+.wifi-btn:hover, .tutorial-nav-btn:hover, .tutorial-train-btn:hover { background: #343b43; }
+.wifi-btn:disabled, .tutorial-nav-btn:disabled { opacity: .4; cursor: default; }
+.wifi-pass-input {
+    flex: 1; min-width: 0;
+    font: 12px var(--mono);
+    background: #0f1114; color: var(--text);
+    border: 1px solid #444c55; border-radius: 2px;
+    padding: 4px 8px;
+}
+.wifi-pass-input:focus { outline: none; border-color: var(--accent); }
+.wifi-pass-input.wrong { border-color: #8a3c3c; color: #f0a0a0; }
+
+/* ---- contratos ---- */
+.contracts-app {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    background: var(--panel);
+    padding: 12px;
+    font-family: var(--sans);
+}
+.contract-card {
+    border-left: 3px solid #4f9a5a;
+    background: #1e2a21;
+    padding: 11px 13px;
+    margin-bottom: 16px;
+}
+.contract-card-name { font: 600 13.5px var(--sans); color: #eaf3ea; margin-bottom: 7px; }
+.contract-card-text { font: 12.5px/1.55 var(--mono); color: #cfd8cf; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.contract-card-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.contract-cancel {
+    font: 12.5px var(--sans);
+    color: #1c1c1c; background: #f1f1f1;
+    border: 1px solid #cfcfcf; border-radius: 2px;
+    padding: 4px 14px; cursor: pointer;
+}
+.contract-cancel:hover { background: #fff; }
+.contracts-group-label { font: 12px var(--sans); color: var(--muted); padding: 0 2px 6px; }
+.contracts-group { background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.contract-row { display: flex; align-items: center; gap: 12px; padding: 10px 13px; cursor: pointer; }
+.contract-row + .contract-row { border-top: 1px solid var(--line); }
+.contract-row:hover { background: #262a2f; }
+.contract-row.soon { cursor: default; }
+.contract-row.soon:hover { background: transparent; }
+.contract-body { flex: 1; min-width: 0; }
+.contract-name { font: 13.5px var(--sans); color: var(--text); }
+.contract-row.soon .contract-name { color: var(--muted); }
+.contract-desc { font: 12px/1.4 var(--sans); color: var(--muted); margin-top: 2px; }
+.contract-check { flex: 0 0 auto; width: 18px; height: 18px; color: var(--accent); }
+.contract-soon { flex: 0 0 auto; font: 12px var(--sans); color: var(--muted); }
+
+/* ---- tutorial ---- */
+.tutorial-app {
+    flex: 1; min-height: 0; width: 100%;
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    font-family: var(--sans);
+    overflow: hidden;
+}
+.tutorial-header { flex: 0 0 auto; padding: 10px 14px 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tutorial-progress { font-size: 12px; color: var(--muted); }
+.tutorial-train-btn.active { background: #3d6aa0; border-color: var(--accent); }
+.tutorial-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 14px; }
+.tutorial-step-title { font: 600 15px var(--sans); color: var(--text); margin-bottom: 6px; }
+.tutorial-step-desc { font: 13px/1.6 var(--sans); color: #b9c0c8; margin-bottom: 10px; }
+.tutorial-app-tag {
+    display: inline-block;
+    font: 11.5px var(--sans); color: #9cc3ea;
+    border: 1px solid #3a4f66; border-radius: 2px;
+    padding: 1px 7px; margin-bottom: 10px;
+}
+.tutorial-cmd {
+    display: block;
+    font: 13px var(--mono); color: #a6e0b4;
+    background: #0d0e10; border: 1px solid var(--line); border-radius: 2px;
+    padding: 7px 10px; margin: 5px 0;
+    white-space: pre-wrap; word-break: break-word;
+}
+.tutorial-nav {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 14px 12px;
+    border-top: 1px solid var(--line);
+}
+.tutorial-dots { display: flex; gap: 5px; }
+.tutorial-dot { width: 6px; height: 6px; border-radius: 50%; background: #3a4047; }
+.tutorial-dot.active { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="credit">Simulação Hack por Caio</div>
+
+    <div class="modebar-group">
+        <div class="modebar">
+            <span class="label">Dificuldade:</span>
+            <button id="diff-off">Desativado</button>
+            <button id="diff-facil" class="active">Facil</button>
+            <button id="diff-medio">Medio</button>
+            <button id="diff-dificil">Dificil</button>
+        </div>
+
+        <div class="modebar">
+            <span class="label">Doxxing:</span>
+            <button id="doxx-on" class="active">Ativado</button>
+            <button id="doxx-off">Desativado</button>
+        </div>
+
+        <div class="modebar">
+            <span class="label">Wi-Fi:</span>
+            <button id="wifi-req-on" class="active">Obrigatorio</button>
+            <button id="wifi-req-off">Livre</button>
+        </div>
+
+        <div class="modebar">
+            <span class="label">Tamanho do iPad:</span>
+            <button id="size-pequeno">Pequeno</button>
+            <button id="size-medio">Medio</button>
+            <button id="size-grande" class="active">Grande</button>
+        </div>
+    </div>
+
+    <div class="ipad" id="ipad">
+        <div class="ipad-cam"></div>
+        <div class="ipad-screen">
+            <div class="ipad-workspace">
+                <!-- area de trabalho: janelas flutuantes, arrastaveis e redimensionaveis -->
+                <div class="ipad-desktop" id="ipad-desktop">
+                <div class="desktop-icons" id="desktop-icons">
+                    <button class="desk-icon" data-app="terminal" title="Terminal"><span class="desk-ico" data-ico="terminal"></span><span class="desk-label">Terminal</span></button>
+                    <button class="desk-icon" data-app="monitor" title="Monitorar"><span class="desk-ico" data-ico="monitor"></span><span class="desk-label">Monitorar</span></button>
+                    <button class="desk-icon" data-app="notas" title="Anotações"><span class="desk-ico" data-ico="notas"></span><span class="desk-label">Anotações</span></button>
+                    <button class="desk-icon" data-app="wifihack" title="Wi-Fi Hack"><span class="desk-ico" data-ico="wifihack"></span><span class="desk-label">Wi-Fi Hack</span></button>
+                    <button class="desk-icon" data-app="wifi" title="Wi-Fi"><span class="desk-ico" data-ico="wifi"></span><span class="desk-label">Wi-Fi</span></button>
+                    <button class="desk-icon" data-app="contratos" title="Contratos"><span class="desk-ico" data-ico="contratos"></span><span class="desk-label">Contratos</span></button>
+                    <button class="desk-icon" data-app="tutorial" title="Tutorial"><span class="desk-ico" data-ico="tutorial"></span><span class="desk-label">Tutorial</span></button>
+                </div>
+                <div class="desktop-tray">
+                    <span id="ipad-clock">9:41</span>
+                    <svg class="task-signal" viewBox="0 0 14 12" aria-hidden="true"><rect x="1" y="8" width="2" height="3" fill="#4fbf6a"/><rect x="4.5" y="6" width="2" height="5" fill="#4fbf6a"/><rect x="8" y="3.5" width="2" height="7.5" fill="#4fbf6a"/><rect x="11.5" y="1" width="2" height="10" fill="#4fbf6a"/></svg>
+                </div>
+
+                                    <div class="ipad-window hidden" id="app-terminal">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="terminal"></span>
+                            <span class="app-title">Terminal</span>
+                            <button class="app-ctl" data-close="terminal" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="terminal" title="Fechar">X</button>
+                        </div>
+                        <div id="terminal">
+                            <div class="titlebar">
+                                <span class="titlebar-text" id="titlebar-text">smbclient — terminal</span>
+                                <span class="titlebar-hint">demo local</span>
+                            </div>
+                            <div class="screen" id="screen">
+                                <div class="output" id="output"></div>
+                                <div class="inputline" id="inputline">
+                                    <span class="prompt" id="prompt">&gt;</span>
+                                    <input id="cmdline" type="text" placeholder="Digite um comando..." autocomplete="off" spellcheck="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-monitor">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="monitor"></span>
+                            <span class="app-title">Monitor de Detecção</span>
+                            <button class="app-ctl" data-close="monitor" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="monitor" title="Fechar">X</button>
+                        </div>
+                        <div id="terminal2">
+                            <div class="titlebar">
+                                <span class="titlebar-text">anti-doxx — console</span>
+                                <span class="titlebar-hint" id="doxx-difficulty-label">defesa: Facil</span>
+                            </div>
+                            <div class="doxxbar-wrap">
+                                <div class="doxxbar-label">
+                                    <span>Localização comprometida (doxxing)</span>
+                                    <span id="doxx-percent">0%</span>
+                                </div>
+                                <div class="doxxbar-track">
+                                    <div class="doxxbar-fill" id="doxx-fill"></div>
+                                </div>
+                            </div>
+                            <div class="screen" id="screen2">
+                                <div class="output" id="output2"></div>
+                                <div class="inputline" id="inputline2">
+                                    <span class="prompt" id="prompt2">&gt;</span>
+                                    <input id="cmdline2" type="text" placeholder="Digite uma contramedida..." autocomplete="off" spellcheck="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-notas">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="notas"></span>
+                            <span class="app-title">Bloco de notas</span>
+                            <button class="app-ctl" data-close="notas" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="notas" title="Fechar">X</button>
+                        </div>
+                        <div id="notepad">
+                            <div class="titlebar">
+                                <span class="titlebar-text">bloco de notas</span>
+                                <button id="notepad-clear" title="Limpar bloco de notas">limpar</button>
+                            </div>
+                            <textarea id="notepad-text" placeholder="Anote aqui os caminhos e senhas das pastas que voce for encontrando..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-wifihack">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="wifihack"></span>
+                            <span class="app-title">Wi-Fi Hack</span>
+                            <button class="app-ctl" data-close="wifihack" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="wifihack" title="Fechar">X</button>
+                        </div>
+                        <div id="wifihack-terminal">
+                            <div class="titlebar">
+                                <span class="titlebar-text">aircrack-ng — console</span>
+                                <span class="titlebar-hint">demo local</span>
+                            </div>
+                            <div class="screen" id="screen3">
+                                <div class="output" id="output3"></div>
+                                <div class="inputline" id="inputline3">
+                                    <span class="prompt" id="prompt3">&gt;</span>
+                                    <input id="cmdline3" type="text" placeholder="Digite um comando..." autocomplete="off" spellcheck="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-wifi">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="wifi"></span>
+                            <span class="app-title">Wi-Fi</span>
+                            <button class="app-ctl" data-close="wifi" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="wifi" title="Fechar">X</button>
+                        </div>
+                        <div class="wifi-app">
+                            <div class="wifi-app-header">Redes disponíveis</div>
+                            <div class="wifi-list hidden" id="wifi-list"></div>
+                            <div class="wifi-empty" id="wifi-empty">
+                                <div>Nenhuma rede encontrada ainda.<br>
+                                Abra o Wi-Fi Hack e use o comando <strong>airodump</strong>.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-contratos">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="contratos"></span>
+                            <span class="app-title">Contratos</span>
+                            <button class="app-ctl" data-close="contratos" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="contratos" title="Fechar">X</button>
+                        </div>
+                        <div class="contracts-app">
+                            <div class="contract-card">
+                                <div class="contract-card-name" id="contract-card-name"></div>
+                                <div class="contract-card-text" id="contract-card-text"></div>
+                                <div class="contract-card-actions">
+                                    <button class="contract-cancel" id="contract-cancel">Cancelar</button>
+                                </div>
+                            </div>
+                            <div class="contracts-group-label">Trocar tipo de contrato</div>
+                            <div class="contracts-group" id="contracts-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="ipad-window hidden" id="app-tutorial">
+                        <div class="app-topbar">
+                            <span class="app-title-ico" data-ico="tutorial"></span>
+                            <span class="app-title">Tutorial</span>
+                            <button class="app-ctl" data-close="tutorial" title="Minimizar">_</button>
+                            <button class="app-ctl app-ctl-x" data-close="tutorial" title="Fechar">X</button>
+                        </div>
+                        <div class="tutorial-app">
+                            <div class="tutorial-header">
+                                <span class="tutorial-progress" id="tutorial-progress"></span>
+                                <button class="tutorial-train-btn" id="tutorial-train-btn"></button>
+                            </div>
+                            <div class="tutorial-body" id="tutorial-body"></div>
+                            <div class="tutorial-nav">
+                                <button class="tutorial-nav-btn" id="tutorial-prev">‹ Anterior</button>
+                                <div class="tutorial-dots" id="tutorial-dots"></div>
+                                <button class="tutorial-nav-btn" id="tutorial-next">Proximo ›</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            
+        </div>
+    </div>
+</div>
+
+<script>
+/* ==================================================================
+   DEMO STANDALONE
+   Nesta versão o sistema de arquivos é gerado aqui no navegador só
+   para você testar. No recurso do FiveM quem gera e valida é o
+   servidor (server/main.lua).
+   ================================================================== */
+
+const READABLE = ['.txt', '.csv', '.xlsx'];
+const readableListText = () => READABLE.join(', ').replace(/, ([^,]*)$/, ' e $1');
+
+/* ---------------- gerador (porte do server/main.lua) ------------- */
+
+const FIRST_NAMES = ['Karen','Jessica','Christopher','Marcos','Ana','Rafael','Bianca',
+    'Douglas','Patricia','Lucas','Helena','Otavio','Camila','Samuel','Tatiana',
+    'Vinicius','Nathalia','Gustavo','Renata','Eduardo'];
+const LAST_NAMES = ['Knight','Silva','Maldonado','Oliveira','Ferreira','Nakamura',
+    'Rodrigues','Castro','Almeida','Barreto','Cardoso','Duarte','Vasquez','Moreira',
+    'Pacheco','Ribeiro','Teixeira','Novaes'];
+const FOLDERS = ['Documentos','Downloads','Backup','Sistema','Financeiro','Trabalho',
+    'Temp','Arquivos_Antigos','Privado','Contabilidade','Area_de_Trabalho','Imagens',
+    'Logs','Recuperacao'];
+const SUBFOLDERS = ['2023','2024','antigo','rascunhos','pessoal','exportados',
+    'nao_organizado','copias','enviados','cache'];
+const JUNK_NAMES = ['setup','update','installer','driver_audio','sysrestore','patch',
+    'launcher','cleanup','crashdump','boot','winrar','servicos','atualizador',
+    'defrag','indexador'];
+const JUNK_EXT = ['.exe','.bat','.sh','.log','.zip'];
+const DECOY_TXT = ['notas','senhas','lembretes','recado','lista','pendencias',
+    'acessos','wifi','tarefas','rascunho','leiame','config_antiga'];
+const DECOY_CSV = ['estoque','funcionarios','contatos','vendas','produtos','horarios',
+    'entregas','fornecedores','inventario'];
+const TARGET_NAMES = ['clientes','cadastro','registros','base_dados','contratos',
+    'relatorio_final','db_export','planilha_geral','dados_2024','backup_sistema'];
+const XLSX_TARGET_NAMES = ['user_data','planilha_acessos','base_credenciais',
+    'controle_login','users_senhas','dados_usuarios','export_usuarios','login_backup'];
+const DECOY_XLSX = ['planilha_antiga','controle_estoque','folha_pagamento',
+    'planilha_vendas','backup_planilha','dados_antigos','export_sistema','relatorio_mensal'];
+const ROLE_USERNAMES = ['admin','sysop','frontdesk','driver','manager','teacher',
+    'buyer','support','operator','finance','recepcao','estoque','seguranca','rh','vendas'];
+const XLSX_PREAMBLE_LINES = ['Planilha de inventario antigo.',
+    'Backup de acessos - nao usar em producao.', 'Exportado do sistema legado.',
+    'Nao compartilhar este arquivo.', 'Rascunho - revisar depois.'];
+// Nomes de pasta com cara de infraestrutura/TI, usados pra dar tematica
+// ao contrato de Infectar (ver buildBareTree). Somados ao pool normal de
+// pastas so quando esse contrato esta ativo.
+const INFECT_FOLDERS = ['firewall_rules_authorizations', 'network_config',
+    'system_updates', 'vpn_access', 'remote_admin', 'port_forwarding',
+    'security_patches', 'server_configs', 'access_control', 'monitoring_tools'];
+const INFECT_FILE_NAMES = ['pdf_reader', 'flash_update', 'driver_pack',
+    'codec_pack', 'printer_setup', 'adobe_patch', 'java_update',
+    'system_tool', 'remote_access', 'backup_agent'];
+
+function generateMissionIp() {
+    return [rand(20, 223), rand(0, 255), rand(0, 255), rand(1, 254)].join('.');
+}
+
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pick = list => list[rand(0, list.length - 1)];
+const pad4 = n => String(n).padStart(4, '0');
+
+function shuffled(list) {
+    const copy = list.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = rand(0, i);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function generatePcName() {
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let out = 'PC-';
+    for (let i = 0; i < 3; i++) out += pick(letters.split(''));
+    return out + rand(0, 9) + pick(letters.split(''));
+}
+
+const generateCard = () =>
+    [0,0,0,0].map(() => pad4(rand(1000, 9999))).join('-');
+
+function generateFullName(used) {
+    for (let i = 0; i < 30; i++) {
+        const name = pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES);
+        if (!used.has(name)) { used.add(name); return name; }
+    }
+    return pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES);
+}
+
+function generatePassword() {
+    const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$';
+    let out = '';
+    for (let i = 0, n = rand(8, 14); i < n; i++) out += pick(chars.split(''));
+    return out;
+}
+
+// Senhas do contrato de Senha: bem mais irregulares de proposito (de 2 a
+// 70 caracteres), pra imitar exports de sistema legado bagunçados como no
+// exemplo (algumas curtas, outras enormes e "embaralhadas").
+function generateXlsxPassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let out = '';
+    for (let i = 0, n = rand(2, 70); i < n; i++) out += pick(chars.split(''));
+    return out;
+}
+
+function pickUnique(pool, used) {
+    for (let i = 0; i < 30; i++) {
+        const val = pick(pool);
+        if (!used.has(val)) { used.add(val); return val; }
+    }
+    return pick(pool);
+}
+
+const generatePhone = () =>
+    `(${rand(11,99)}) 9${pad4(rand(1000,9999))}-${pad4(rand(1000,9999))}`;
+
+const LOCK_HINT_NAMES = ['credenciais','acessos_ti','chamado_ti','senhas_pastas'];
+
+/* ---------------- Wi-Fi Hack ------------------------------------ */
+
+const WIFI_NAME_PREFIXES = ['Casa','Familia','Rede','Apto','Loja','Escritorio','Deposito','Studio'];
+const WIFI_ISP_WORDS = ['FIBRALINK','NETCASA','CONECTA','ULTRAWIFI','ONDANET','SPEEDNET','LINKFIBRA'];
+
+function generateWifiSsid(used) {
+    for (let i = 0; i < 20; i++) {
+        const style = rand(1, 3);
+        let name;
+        if (style === 1) name = pick(WIFI_NAME_PREFIXES) + '_' + pick(LAST_NAMES);
+        else if (style === 2) name = pick(WIFI_ISP_WORDS) + '-' + pad4(rand(0, 9999));
+        else name = pick(FIRST_NAMES) + '_' + pick(['WiFi', 'Net', '5G', 'Casa']);
+        if (!used.has(name)) { used.add(name); return name; }
+    }
+    return pick(WIFI_ISP_WORDS) + '-' + pad4(rand(0, 9999));
+}
+
+function generateBssid() {
+    const byteHex = () => rand(0, 255).toString(16).padStart(2, '0').toUpperCase();
+    return [byteHex(), byteHex(), byteHex(), byteHex(), byteHex(), byteHex()].join(':');
+}
+
+// WPA2 e o mais comum (mais realista); "Aberta" e rara e serve de tentacao —
+// o objetivo do minigame e reforcar que rede aberta nunca deve ser o alvo
+// do aireplay/aircrack (ela nem tem handshake pra capturar).
+function pickWifiSecurity() {
+    const pool = ['WPA2', 'WPA2', 'WPA2', 'WPA', 'WPA', 'WEP', 'Aberta'];
+    return pick(pool);
+}
+
+function generateWifiNetworks() {
+    const used = new Set();
+    const total = rand(5, 7);
+    const networks = [];
+    for (let i = 0; i < total; i++) {
+        networks.push({
+            ssid: generateWifiSsid(used),
+            bssid: generateBssid(),
+            signal: rand(28, 96),
+            security: pickWifiSecurity(),
+            password: generatePassword(),
+            handshakeReady: false,
+            cracked: false,
+            crackAttempts: 0
+        });
+    }
+    return networks;
+}
+
+function findWifiNetwork(bssid) {
+    if (!bssid) return null;
+    const target = bssid.trim().toUpperCase();
+    return state.wifiNetworks.find(n => n.bssid === target);
+}
+
+/* ---------------- Anti-Doxxing --------------------------------- */
+
+const COUNTERMEASURES = [
+    { name: 'Força Bruta',                keyword: 'blockattack' },
+    { name: 'Apagar Logs',                keyword: 'clearlogs' },
+    { name: 'Instalar Rootkit',           keyword: 'deployrootkit' },
+    { name: 'Chave de Registros',         keyword: 'editreg' },
+    { name: 'Criptografia de Sessão',     keyword: 'encryptsession' },
+    { name: 'Atualizar Firewall',         keyword: 'firewallrules' },
+    { name: 'Liberar Recursos do Sistema', keyword: 'optimize' },
+    { name: 'Revalidar Credenciais',      keyword: 'reauthenticate' },
+    { name: 'Proxy',                      keyword: 'setproxy' },
+    { name: 'Evitar Rastreamento',        keyword: 'spoofmac' },
+    { name: 'Token',                      keyword: 'stealtoken' },
+    { name: 'Roteamento Tor',             keyword: 'torroute' }
+];
+
+function generateFolderPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for (let i = 0; i < 7; i++) out += pick(chars.split(''));
+    return out;
+}
+
+function buildLockHintContent(folderName, password, ext) {
+    if (ext === '.csv') {
+        return `Pasta ${folderName} senha: ${password}`;
+    }
+    return [`chamado #${rand(1000, 9999)} - ti`, '',
+        `a pasta ${folderName} foi protegida depois do incidente.`,
+        `senha temporaria: ${password}`, '',
+        'trocar isso na proxima manutencao'].join('\n');
+}
+
+function buildTargetContent(ext) {
+    const used = new Set();
+    const total = rand(3, 6);
+
+    if (ext === '.csv') {
+        const lines = ['Name,Card'];
+        for (let i = 0; i < total; i++)
+            lines.push(generateFullName(used) + ',' + generateCard());
+        return lines.join('\n');
+    }
+
+    if (ext === '.xlsx') {
+        const lines = [];
+        // Preambulo opcional, igual acontece em planilhas exportadas de
+        // qualquer jeito — nao atrapalha a checagem, que so olha o padrao
+        // "User,Password" mais as linhas de credencial depois dele.
+        if (Math.random() < 0.6) { lines.push(pick(XLSX_PREAMBLE_LINES), ''); }
+        lines.push('User,Password');
+        const usedUsers = new Set();
+        for (let i = 0, n = rand(4, 7); i < n; i++)
+            lines.push(pickUnique(ROLE_USERNAMES, usedUsers) + ',' + generateXlsxPassword());
+        return lines.join('\n');
+    }
+
+    const lines = ['Resumo do sistema:', ''];
+    for (let i = 0; i < total; i++) {
+        lines.push('Name: ' + generateFullName(used));
+        lines.push('Card: ' + generateCard());
+        lines.push('');
+    }
+    return lines.join('\n');
+}
+
+function buildDecoyTxtContent() {
+    const kind = rand(1, 4);
+
+    if (kind === 1) {
+        const lines = ['acessos salvos (nao apagar):', ''];
+        for (let i = 0, n = rand(3, 5); i < n; i++)
+            lines.push(pick(['email','roteador','painel','ftp','nuvem','banco'])
+                + ' -> ' + generatePassword());
+        return lines.join('\n');
+    }
+    if (kind === 2) {
+        return ['lembrar:',
+            '- ligar pro contador ate sexta',
+            '- pagar a conta de luz',
+            '- levar o carro na revisao',
+            '- responder o email do fornecedor'].join('\n');
+    }
+    if (kind === 3) {
+        const lines = ['rascunho reuniao', ''];
+        for (let i = 0, n = rand(3, 5); i < n; i++)
+            lines.push(pick([
+                'cliente pediu desconto de novo',
+                'revisar o contrato antes de assinar',
+                'a entrega atrasou 3 dias',
+                'confirmar o pedido com o deposito',
+                'trocar o fornecedor de embalagem']));
+        return lines.join('\n');
+    }
+    return ['senha do wifi da sala: ' + generatePassword(),
+        'senha do wifi dos fundos: ' + generatePassword(),
+        '', 'nao passar pra ninguem'].join('\n');
+}
+
+function buildDecoyCsvContent() {
+    const kind = rand(1, 3);
+    const used = new Set();
+
+    if (kind === 1) {
+        const lines = ['produto,quantidade,preco'];
+        for (let i = 0, n = rand(4, 7); i < n; i++)
+            lines.push(`${pick(['monitor','teclado','cabo hdmi','mouse','headset','webcam','ssd','fonte'])},${rand(1,40)},${rand(20,900)}.${pad4(rand(0,99)).slice(-2)}`);
+        return lines.join('\n');
+    }
+    if (kind === 2) {
+        const lines = ['Name,Phone'];
+        for (let i = 0, n = rand(4, 7); i < n; i++)
+            lines.push(generateFullName(used) + ',' + generatePhone());
+        return lines.join('\n');
+    }
+    const lines = ['data,descricao,valor'];
+    for (let i = 0, n = rand(4, 7); i < n; i++)
+        lines.push(`${String(rand(1,28)).padStart(2,'0')}/${String(rand(1,12)).padStart(2,'0')}/2024,${pick(['almoco','combustivel','material','frete','manutencao','aluguel'])},${rand(30,2000)}.${String(rand(0,99)).padStart(2,'0')}`);
+    return lines.join('\n');
+}
+
+// Falsos .xlsx pro contrato de Senha: parecem planilha real, mas nunca
+// seguem o padrao "User,Password" — o jogador so descobre abrindo com cat.
+function buildDecoyXlsxContent() {
+    const kind = rand(1, 3);
+
+    if (kind === 1) {
+        const lines = ['Item,Quantidade,Preco'];
+        for (let i = 0, n = rand(4, 7); i < n; i++)
+            lines.push(`${pick(['monitor','teclado','cabo hdmi','mouse','headset','webcam','ssd','fonte'])},${rand(1,40)},${rand(20,900)}.${String(rand(0,99)).padStart(2,'0')}`);
+        return lines.join('\n');
+    }
+    if (kind === 2) {
+        const used = new Set();
+        const lines = ['Nome,Cargo,Setor'];
+        for (let i = 0, n = rand(4, 7); i < n; i++)
+            lines.push(`${generateFullName(used)},${pick(['Analista','Assistente','Supervisor','Coordenador','Estagiario'])},${pick(['Financeiro','TI','RH','Vendas','Operacoes'])}`);
+        return lines.join('\n');
+    }
+    const lines = [pick(XLSX_PREAMBLE_LINES), '', 'Data,Descricao,Valor'];
+    for (let i = 0, n = rand(4, 7); i < n; i++)
+        lines.push(`${String(rand(1,28)).padStart(2,'0')}/${String(rand(1,12)).padStart(2,'0')}/2024,${pick(['almoco','combustivel','material','frete','manutencao','aluguel'])},${rand(30,2000)}.${String(rand(0,99)).padStart(2,'0')}`);
+    return lines.join('\n');
+}
+
+// Controla o "tamanho do labirinto" de pastas por dificuldade.
+// maxDepth = quantos niveis de subpasta abaixo da pasta raiz do PC.
+// Em todos os niveis, cada pasta tem no maximo 1 subpasta (nunca mais
+// que isso), so muda quantas pastas de topo existem e quao fundo o
+// aninhamento pode ir. Agora a dificuldade do anti-doxxing tambem escala
+// o tamanho do labirinto (mais pastas no Dificil), pra dar espaco
+// suficiente para varias pastas trancadas ao mesmo tempo.
+const FOLDER_COMPLEXITY_BY_DIFF = {
+    off:     { topMin: 3, topMax: 4, maxDepth: 2, subChance: 0.60 },
+    facil:   { topMin: 3, topMax: 4, maxDepth: 2, subChance: 0.60 },
+    medio:   { topMin: 4, topMax: 5, maxDepth: 2, subChance: 0.65 },
+    dificil: { topMin: 5, topMax: 7, maxDepth: 2, subChance: 0.75 }
+};
+
+// Quantas pastas trancadas (com senha) a sessao vai ter, por dificuldade.
+// Facil fica como sempre foi (so 1). Medio ganha uma variacao pequena.
+// Dificil varia entre 2 e 3, mas o teto so sobe pra 3 quando o labirinto
+// gerado tiver bastante pasta (8+); com poucas pastas (ex.: 7) fica no
+// maximo em 2, pra nao ficar uma cacada de senha atras de senha.
+const LOCK_COUNT_BY_DIFF = {
+    off:     () => 1,
+    facil:   () => 1,
+    medio:   () => rand(1, 2),
+    dificil: (dirCount) => {
+        const cap = dirCount >= 8 ? 3 : 2;
+        return Math.min(rand(2, 3), cap);
+    }
+};
+
+// Gera so a arvore de pastas + arquivos de distracao, sem alvo e sem
+// trancas. Usada tanto pelo PC real (que ainda ganha alvo/tranca em cima)
+// quanto pelos PCs chamariz da rede (que ficam so nisso).
+function buildBareTree(difficultyKey, contractType = 'cartao') {
+    const complexity = FOLDER_COMPLEXITY_BY_DIFF[difficultyKey] || FOLDER_COMPLEXITY_BY_DIFF.facil;
+    const pcName = generatePcName();
+    const root = { name: pcName, type: 'dir', children: [] };
+
+    const folderPool = shuffled(contractType === 'infectar' ? FOLDERS.concat(INFECT_FOLDERS) : FOLDERS);
+    const subPool    = shuffled(SUBFOLDERS);
+    const junkPool   = shuffled(JUNK_NAMES);
+    const txtPool    = shuffled(DECOY_TXT);
+    const csvPool    = shuffled(DECOY_CSV);
+    const xlsxPool   = shuffled(DECOY_XLSX);
+
+    let fi = 0, si = 0, ji = 0, ti = 0, ci = 0, xi = 0;
+    const allDirs = [];
+
+    // Cria a subpasta (no maximo 1 por pasta, em qualquer dificuldade).
+    // So a profundidade maxima do aninhamento muda conforme a dificuldade.
+    function addSubfolders(parentNode, parentPath, depth) {
+        if (depth > complexity.maxDepth) return;
+        if (Math.random() >= complexity.subChance) return;
+
+        const sub = { name: subPool[si % subPool.length], type: 'dir', children: [] };
+        si++;
+        parentNode.children.push(sub);
+        const path = parentPath + '/' + sub.name;
+        allDirs.push({ node: sub, path });
+        addSubfolders(sub, path, depth + 1);
+    }
+
+    for (let i = 0, n = rand(complexity.topMin, complexity.topMax); i < n; i++) {
+        const dir = { name: folderPool[fi % folderPool.length], type: 'dir', children: [] };
+        fi++;
+        root.children.push(dir);
+        const path = '/' + dir.name;
+        allDirs.push({ node: dir, path });
+        addSubfolders(dir, path, 2);
+    }
+
+    const wantsXlsxDecoys = contractType === 'senha';
+
+    for (const entry of allDirs) {
+        for (let i = 0, n = rand(2, 5); i < n; i++) {
+            const roll = rand(1, 100);
+            if (wantsXlsxDecoys) {
+                if (roll <= 30) {
+                    entry.node.children.push({ name: txtPool[ti] + '.txt', type: 'file',
+                        content: buildDecoyTxtContent() });
+                    ti = (ti + 1) % txtPool.length;
+                } else if (roll <= 50) {
+                    entry.node.children.push({ name: csvPool[ci] + '.csv', type: 'file',
+                        content: buildDecoyCsvContent() });
+                    ci = (ci + 1) % csvPool.length;
+                } else if (roll <= 75) {
+                    entry.node.children.push({ name: xlsxPool[xi] + '.xlsx', type: 'file',
+                        content: buildDecoyXlsxContent() });
+                    xi = (xi + 1) % xlsxPool.length;
+                } else {
+                    entry.node.children.push({ name: junkPool[ji] + pick(JUNK_EXT),
+                        type: 'file', content: '' });
+                    ji = (ji + 1) % junkPool.length;
+                }
+            } else if (roll <= 40) {
+                entry.node.children.push({ name: txtPool[ti] + '.txt', type: 'file',
+                    content: buildDecoyTxtContent() });
+                ti = (ti + 1) % txtPool.length;
+            } else if (roll <= 65) {
+                entry.node.children.push({ name: csvPool[ci] + '.csv', type: 'file',
+                    content: buildDecoyCsvContent() });
+                ci = (ci + 1) % csvPool.length;
+            } else {
+                entry.node.children.push({ name: junkPool[ji] + pick(JUNK_EXT),
+                    type: 'file', content: '' });
+                ji = (ji + 1) % junkPool.length;
+            }
+        }
+    }
+
+    return { pcName, root, allDirs };
+}
+
+// Chance de a dica de senha de uma pasta trancada parar em um PC
+// chamariz da rede, em vez de ficar no proprio PC alvo. So faz sentido
+// quando ha mais de um PC na rede (medio/dificil). No Facil a dica
+// sempre fica no PC alvo, pra manter simples.
+const HINT_ON_DECOY_CHANCE = { off: 0, facil: 0, medio: 0.35, dificil: 0.65 };
+
+function buildFileSystem(difficultyKey = 'facil', decoyDirPools = [], contractType = 'cartao') {
+    const { pcName, root, allDirs } = buildBareTree(difficultyKey, contractType);
+    const targetPool = shuffled(contractType === 'senha' ? XLSX_TARGET_NAMES : TARGET_NAMES);
+
+    // Infectar nao tem um arquivo pra achar/copiar — o contrato ja informa
+    // tudo (pasta, IP, arquivo). O "alvo" aqui e so a pasta que o jogador
+    // precisa acessar, restrita a uma pasta de topo (nada de subpasta),
+    // pra bater exatamente com o nome que aparece na missao.
+    const isInfect = contractType === 'infectar';
+    const topDirs = allDirs.filter(d => d.path.split('/').length === 2);
+    const target = isInfect ? pick(topDirs.length ? topDirs : allDirs) : pick(allDirs);
+
+    let ext = null, targetName = null;
+    if (!isInfect) {
+        ext = contractType === 'senha' ? '.xlsx' : (Math.random() < 0.5 ? '.txt' : '.csv');
+        targetName = targetPool[0] + ext;
+        target.node.children.push({ name: targetName, type: 'file',
+            content: buildTargetContent(ext) });
+    }
+
+    // Uma ou mais pastas ficam protegidas por senha, dependendo da
+    // dificuldade (ver LOCK_COUNT_BY_DIFF).
+    // LOCK_ON_TARGET_CHANCE = chance de a primeira tranca cair no caminho
+    // do arquivo correto, obrigando o jogador a desbloquear. Com 0 ela
+    // nunca atrapalha; com 1 a senha sempre faz parte do caminho.
+    const LOCK_ON_TARGET_CHANCE = 0.5;
+    let lockPool = allDirs;
+    if (Math.random() < LOCK_ON_TARGET_CHANCE) {
+        const onPath = allDirs.filter(d =>
+            target.path === d.path || target.path.startsWith(d.path + '/'));
+        if (onPath.length) lockPool = onPath;
+    }
+
+    // Sorteia quantas pastas ficam trancadas nesta sessao. Sempre deixa
+    // pelo menos 1 pasta aberta (allDirs.length - 1) pra garantir que
+    // sempre exista onde guardar as dicas de senha.
+    const wantedLocks = (LOCK_COUNT_BY_DIFF[difficultyKey] || LOCK_COUNT_BY_DIFF.facil)(allDirs.length);
+    const lockCount = Math.max(1, Math.min(wantedLocks, allDirs.length - 1));
+
+    const lockedEntries = [pick(lockPool)];
+    const extraPool = shuffled(allDirs.filter(d => d.path !== lockedEntries[0].path));
+    lockedEntries.push(...extraPool.slice(0, lockCount - 1));
+
+    lockedEntries.forEach(entry => {
+        entry.node.locked = true;
+        entry.node.password = generateFolderPassword();
+    });
+
+    // Cada senha vai parar em um arquivo FORA de qualquer pasta trancada
+    // (nao so a propria) — senao o jogador podia precisar abrir uma pasta
+    // trancada pra achar a senha de outra, e travar o jogo.
+    const lockedPaths = lockedEntries.map(e => e.path);
+    const isInsideAnyLock = path => lockedPaths.some(lp =>
+        path === lp || path.startsWith(lp + '/'));
+    const openDirs = allDirs.filter(d => !isInsideAnyLock(d.path));
+    const hintPool = openDirs.length ? openDirs : allDirs;
+
+    // Dicas de senha tambem podem ir parar em uma pasta de um PC chamariz
+    // da rede (ver HINT_ON_DECOY_CHANCE), obrigando o jogador a vasculhar
+    // mais de uma maquina pra achar a senha da pasta trancada no alvo.
+    const decoyChance = HINT_ON_DECOY_CHANCE[difficultyKey] || 0;
+    const decoyDirs = decoyDirPools.flatMap(p =>
+        p.allDirs.map(d => ({ ...d, pc: p.pc })));
+
+    const hintPc = [];
+    const hintPath = [];
+
+    lockedEntries.forEach((entry, idx) => {
+        const useDecoy = decoyDirs.length > 0 && Math.random() < decoyChance;
+        const hintDir = useDecoy ? pick(decoyDirs) : pick(hintPool);
+        const hintExt = Math.random() < 0.5 ? '.txt' : '.csv';
+        const baseName = pick(LOCK_HINT_NAMES);
+        const hintName = (lockedEntries.length > 1 ? `${baseName}_${idx + 1}` : baseName) + hintExt;
+        hintDir.node.children.push({
+            name: hintName,
+            type: 'file',
+            content: buildLockHintContent(entry.node.name, entry.node.password, hintExt)
+        });
+        hintPc.push(useDecoy ? hintDir.pc : pcName);
+        hintPath.push(hintDir.path + '/' + hintName);
+    });
+
+    return {
+        tree: root,
+        answer: isInfect ? null : target.path + '/' + targetName,
+        pc: pcName,
+        locked: lockedEntries.map(e => e.path),
+        password: lockedEntries.map(e => e.node.password),
+        hintPc,
+        hintPath,
+        mission: isInfect ? {
+            folder: target.path,
+            folderName: target.node.name,
+            ip: generateMissionIp(),
+            file: pick(INFECT_FILE_NAMES) + '.exe'
+        } : null
+    };
+}
+
+// PC "chamariz": mesma complexidade de pastas da dificuldade escolhida,
+// mas sem o arquivo-alvo e sem nenhuma pasta trancada. Existe so pra
+// consumir o tempo do jogador enquanto ele procura o PC certo na rede.
+function buildDecoyPC(difficultyKey, contractType = 'cartao') {
+    const { pcName, root, allDirs } = buildBareTree(difficultyKey, contractType);
+    return { tree: root, pc: pcName, allDirs };
+}
+
+// Quantos PCs aparecem no "arp" por dificuldade. So um deles (sorteado)
+// e o de verdade — os outros sao chamarizes completos, com pastas e
+// arquivos de distracao, mas sem alvo e sem senha nenhuma.
+const NETWORK_PC_COUNT = { off: 1, facil: 1, medio: 3, dificil: 6 };
+
+function buildNetwork(difficultyKey, contractType = 'cartao') {
+    const count = NETWORK_PC_COUNT[difficultyKey] || 1;
+    const targetIndex = rand(0, count - 1);
+    const usedNames = new Set();
+    const pcs = new Array(count);
+    const decoyDirPools = []; // allDirs de cada chamarize, pra poder esconder dicas de senha la
+
+    // Os chamarizes sao montados primeiro, pra que suas pastas ja existam
+    // quando o PC alvo for gerado — assim uma dica de senha pode ir parar
+    // em um deles em vez de sempre ficar no proprio alvo.
+    for (let i = 0; i < count; i++) {
+        if (i === targetIndex) continue;
+        let decoy = buildDecoyPC(difficultyKey, contractType);
+        while (usedNames.has(decoy.pc)) decoy = buildDecoyPC(difficultyKey, contractType);
+        usedNames.add(decoy.pc);
+        pcs[i] = { name: decoy.pc, tree: decoy.tree, isTarget: false, answer: null };
+        decoyDirPools.push({ pc: decoy.pc, allDirs: decoy.allDirs });
+    }
+
+    let session = buildFileSystem(difficultyKey, decoyDirPools, contractType);
+    while (usedNames.has(session.pc)) session = buildFileSystem(difficultyKey, decoyDirPools, contractType);
+    usedNames.add(session.pc);
+    pcs[targetIndex] = {
+        name: session.pc, tree: session.tree, isTarget: true, answer: session.answer,
+        // Guardado so pra uso interno (nunca impresso em nenhum comando normal).
+        _locked: session.locked, _password: session.password,
+        _hintPc: session.hintPc, _hintPath: session.hintPath,
+        _mission: session.mission
+    };
+
+    return pcs;
+}
+
+/* ---------------- terminal --------------------------------------- */
+
+const el = {
+    terminal:  document.getElementById('terminal'),
+    screen:    document.getElementById('screen'),
+    output:    document.getElementById('output'),
+    prompt:    document.getElementById('prompt'),
+    cmdline:   document.getElementById('cmdline'),
+    title:     document.getElementById('titlebar-text'),
+    inputline: document.getElementById('inputline')
+};
+
+const el2 = {
+    output:    document.getElementById('output2'),
+    prompt:    document.getElementById('prompt2'),
+    cmdline:   document.getElementById('cmdline2'),
+    screen:    document.getElementById('screen2')
+};
+
+const el3 = {
+    output:    document.getElementById('output3'),
+    prompt:    document.getElementById('prompt3'),
+    cmdline:   document.getElementById('cmdline3'),
+    screen:    document.getElementById('screen3')
+};
+
+const doxxUI = {
+    fill:    document.getElementById('doxx-fill'),
+    percent: document.getElementById('doxx-percent'),
+    diffOff:    document.getElementById('diff-off'),
+    diffFacil:  document.getElementById('diff-facil'),
+    diffMedio:  document.getElementById('diff-medio'),
+    diffDificil: document.getElementById('diff-dificil'),
+    diffLabel:  document.getElementById('doxx-difficulty-label'),
+    toggleOn:  document.getElementById('doxx-on'),
+    toggleOff: document.getElementById('doxx-off')
+};
+
+const wifiUI = {
+    reqOn:  document.getElementById('wifi-req-on'),
+    reqOff: document.getElementById('wifi-req-off')
+};
+
+const sizeUI = {
+    pequeno: document.getElementById('size-pequeno'),
+    medio:   document.getElementById('size-medio'),
+    grande:  document.getElementById('size-grande')
+};
+
+const notepadUI = {
+    text:     document.getElementById('notepad-text'),
+    clearBtn: document.getElementById('notepad-clear')
+};
+
+function setLayoutSize(key) {
+    document.body.classList.remove('size-pequeno', 'size-medio', 'size-grande');
+    document.body.classList.add('size-' + key);
+    sizeUI.pequeno.classList.toggle('active', key === 'pequeno');
+    sizeUI.medio.classList.toggle('active', key === 'medio');
+    sizeUI.grande.classList.toggle('active', key === 'grande');
+    if (typeof placeAllWindows === 'function' && typeof desktopEl !== 'undefined') placeAllWindows();
+}
+
+// Cada dificuldade controla: a chance de uma tentativa de abrir pasta
+// realmente disparar o sistema, quanto isso sobe a exposicao (damage) e
+// quanto uma contramedida bem aplicada recupera (recover). Numeros fixos,
+// sem sorteio, pra ficar previsivel.
+// No Facil e Medio a recuperacao cobre (ou quase cobre) o dano, entao da
+// pra jogar com seguranca. No Dificil o dano e maior que a recuperacao —
+// mesmo acertando toda contramedida, a exposicao sobe aos poucos
+// (ex.: +15 no ataque, -10 na defesa = sobra +5 de exposicao por ciclo),
+// entao a ameaca vai aumentando com o tempo e da pra perder mesmo jogando bem.
+const DIFFICULTIES = {
+    off:     { label: 'Desativado', triggerChance: 0,    damage: 0,  recover: 0  },
+    facil:   { label: 'Facil',      triggerChance: 0.25, damage: 8,  recover: 9  },
+    medio:   { label: 'Medio',      triggerChance: 0.45, damage: 12, recover: 10 },
+    dificil: { label: 'Dificil',    triggerChance: 0.70, damage: 15, recover: 10 }
+};
+
+const state = {
+    pc: null, tree: null, answer: null,
+    pcs: [], // lista de PCs da rede atual (so um deles e o alvo de verdade)
+    connected: false, stack: [],
+    history: [], historyIndex: -1, busy: false,
+    passwordPrompt: null,
+
+    difficulty: 'facil',
+    doxx: 0,
+    doxxOver: false,
+    doxxEnabled: true,   // separado da dificuldade: dificil sem doxxing = possivel
+    wifiRequired: true,  // se falso, nao precisa quebrar o Wi-Fi pra escanear a rede
+    contractType: 'cartao', // objetivo atual do minigame (ver app Contratos)
+    trainingMode: false,    // ver app Tutorial: facil + doxxing off + wifi livre
+    tutorialStep: 0,
+    activeAttacks: [],   // { name, keyword }
+    history2: [], historyIndex2: -1,
+
+    // Wi-Fi Hack: redes sao geradas na primeira vez que "airodump" roda,
+    // e ficam fixas pelo resto da sessao (mesmos BSSIDs pra aireplay/aircrack
+    // continuarem batendo com o que apareceu no scan).
+    busy3: false,
+    history3: [], historyIndex3: -1,
+    wifiNetworks: [],
+    wifiScanned: false,
+    wifiConnected: null, // bssid da rede conectada no app Wi-Fi, ou null
+
+    // O terminal so revela o host da rede local (PC-XXXX) depois que o
+    // jogador se conecta a alguma rede Wi-Fi. Fica marcado como revelado
+    // para nao reimprimir a varredura toda vez que o wifi reconectar.
+    terminalNetworkRevealed: false
+};
+
+const childrenOf = node => !node || !node.children ? []
+    : (Array.isArray(node.children) ? node.children : Object.values(node.children));
+
+const currentDir = () => state.stack[state.stack.length - 1];
+
+function currentPath() {
+    if (state.stack.length <= 1) return '/';
+    return '/' + state.stack.slice(1).map(n => n.name).join('/');
+}
+
+function fullPathOf(fileName) {
+    const base = currentPath();
+    return base === '/' ? '/' + fileName : base + '/' + fileName;
+}
+
+function extensionOf(name) {
+    const i = name.lastIndexOf('.');
+    return i === -1 ? '' : name.slice(i).toLowerCase();
+}
+
+function findChild(name, type) {
+    const target = name.toLowerCase();
+    return childrenOf(currentDir()).find(
+        c => c.name.toLowerCase() === target && (!type || c.type === type));
+}
+
+function updatePrompt() {
+    if (state.passwordPrompt) {
+        el.prompt.textContent = 'senha:';
+        return;
+    }
+    el.prompt.textContent = '>';
+}
+
+function print(text = '', cls = '') {
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    el.output.appendChild(line);
+    el.screen.scrollTop = el.screen.scrollHeight;
+}
+
+function print2(text = '', cls = '') {
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    el2.output.appendChild(line);
+    requestAnimationFrame(() => { el2.screen.scrollTop = el2.screen.scrollHeight; });
+}
+
+function print3(text = '', cls = '') {
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    el3.output.appendChild(line);
+    requestAnimationFrame(() => { el3.screen.scrollTop = el3.screen.scrollHeight; });
+}
+
+const printBlock = (text, cls = '') =>
+    String(text).split('\n').forEach(l => print(l, cls));
+
+// Botao "Entregar contrato" que aparece inline no output, so quando o
+// arquivo certo foi encontrado (ver cat()). Clicar nele faz a mesma
+// checagem/efeito que o comando copy, so que sem precisar digitar nada.
+function printDeliverButton(file) {
+    print('');
+    const wrap = document.createElement('div');
+    wrap.className = 'line deliver-wrap';
+    const btn = document.createElement('button');
+    btn.className = 'deliver-btn';
+    btn.textContent = 'Entregar contrato';
+    btn.addEventListener('click', () => {
+        if (state.busy) return;
+        btn.disabled = true;
+        btn.textContent = 'Entregando...';
+        state.busy = true;
+        setTimeout(() => handleCopyResult(true), 500);
+    });
+    wrap.appendChild(btn);
+    el.output.appendChild(wrap);
+    el.screen.scrollTop = el.screen.scrollHeight;
+}
+
+const byName = (a, b) => a.name.localeCompare(b.name);
+
+/* ---------------- Anti-Doxxing: barra e ataques ------------------- */
+
+function updateDoxxBar() {
+    const pct = Math.round(state.doxx);
+    doxxUI.fill.style.width = pct + '%';
+    doxxUI.fill.style.background = pct >= 80 ? '#d9534f' : (pct >= 50 ? '#d9a441' : '#4a84c4');
+    doxxUI.percent.textContent = pct + '%';
+}
+
+function applyDoxxDelta(amount, reason) {
+    if (!state.doxxEnabled || state.doxxOver) return;
+
+    state.doxx = Math.max(0, Math.min(100, state.doxx + amount));
+    updateDoxxBar();
+
+    if (state.doxx >= 100) triggerDoxxed();
+}
+
+const ATTACK_TIME_LIMIT = 4500; // 4,5s pra acertar a contramedida antes dela expirar
+
+function clearAttackTimers() {
+    state.activeAttacks.forEach(a => clearTimeout(a.timerId));
+}
+
+function spawnAttack() {
+    if (!state.doxxEnabled || state.doxxOver) return;
+    if (state.activeAttacks.length >= 3) return; // nao empilha ameaças demais
+
+    const pool = COUNTERMEASURES.filter(
+        c => !state.activeAttacks.some(a => a.keyword === c.keyword));
+    if (pool.length === 0) return;
+
+    const attack = { ...pick(pool) };
+    attack.timerId = setTimeout(() => expireAttack(attack.keyword), ATTACK_TIME_LIMIT);
+    state.activeAttacks.push(attack);
+
+    print2(`[ALERTA] Tentativa detectada: ${attack.name}`, 'error');
+    print2(`Use o comando de contramedida em ate ${(ATTACK_TIME_LIMIT / 1000).toFixed(1)}s.`, 'dim');
+}
+
+function expireAttack(keyword) {
+    const idx = state.activeAttacks.findIndex(a => a.keyword === keyword);
+    if (idx === -1) return; // ja foi neutralizada antes do tempo acabar
+
+    const [attack] = state.activeAttacks.splice(idx, 1);
+    print2(`Tempo esgotado: ${attack.name}. Exposicao mantida no nivel do ataque.`, 'error');
+}
+
+function resolveAttack(keyword) {
+    const idx = state.activeAttacks.findIndex(a => a.keyword === keyword);
+    if (idx === -1) return false;
+
+    const [attack] = state.activeAttacks.splice(idx, 1);
+    clearTimeout(attack.timerId);
+    print2(`Contramedida aplicada: ${attack.name}. Ameaca neutralizada.`, 'success');
+    const cfg = DIFFICULTIES[state.difficulty];
+    applyDoxxDelta(-(cfg ? cfg.recover : 10), 'contramedida');
+    return true;
+}
+
+/** Chamado a cada tentativa real de abrir uma pasta no terminal de hack. */
+function onFolderOpenAttempt() {
+    if (!state.doxxEnabled) return;
+    const cfg = DIFFICULTIES[state.difficulty];
+    if (!cfg || cfg.triggerChance <= 0) return;
+
+    // Chance de a tentativa nem sequer ser notada pelo sistema.
+    if (Math.random() >= cfg.triggerChance) return;
+
+    applyDoxxDelta(cfg.damage, 'abriu pasta');
+    if (state.doxxOver) return;
+
+    // Toda vez que o sistema notar, uma contramedida e exigida na hora.
+    spawnAttack();
+}
+
+function triggerDoxxed() {
+    state.doxxOver = true;
+    clearAttackTimers();
+
+    print2('');
+    print2('VOCE FOI DOXXADO. Conexao rastreada e encerrada.', 'error');
+    print('');
+    print('CONEXAO ENCERRADA: nivel de exposicao atingiu 100%.', 'error');
+    print('Recarregue a pagina para tentar novamente.', 'dim');
+
+    state.busy = true;
+    el.cmdline.blur();
+    el2.cmdline.blur();
+}
+
+function newSession(difficultyKey) {
+    state.pcs = buildNetwork(difficultyKey, state.contractType);
+    state.pc = null;
+    state.tree = null;
+    state.answer = null;
+    state.connected = false;
+    state.stack = [];
+    state.busy = false;
+    state.doxxOver = false;
+    state.passwordPrompt = null;
+    state.terminalNetworkRevealed = false;
+
+    el.title.textContent = 'smbclient — terminal';
+    el.output.innerHTML = '';
+    el.inputline.classList.remove('hidden');
+
+    if (hasNetworkAccess()) {
+        // Ja estava conectado ao Wi-Fi (ou o Wi-Fi esta configurado como
+        // "Livre") antes desta sessao comecar — revela na hora.
+        revealNetworkScan();
+    } else {
+        printNoNetworkMessage();
+    }
+
+    updatePrompt();
+    el.cmdline.focus();
+    renderContractMission();
+}
+
+function printNoNetworkMessage() {
+    print('Sem conexao com a rede local.', 'error');
+    print('Conecte-se a uma rede Wi-Fi (abra o app Wi-Fi) para escanear hosts por perto.', 'dim');
+    print('Redes protegidas precisam ser quebradas primeiro no app Wi-Fi Hack.', 'dim');
+    print('');
+}
+
+/** Chamado assim que o jogador conecta a alguma rede Wi-Fi. So faz efeito
+ *  uma vez por sessao — reconectar depois nao reimprime a varredura. */
+function revealNetworkScan() {
+    if (state.terminalNetworkRevealed) return;
+    state.terminalNetworkRevealed = true;
+
+    el.output.innerHTML = '';
+    print('Varredura da rede local concluida.', 'dim');
+    print('');
+    print('Use arp para listar os hosts encontrados nesta rede.', 'dim');
+    print('');
+    updatePrompt();
+}
+
+function setDifficulty(key) {
+    const cfg = DIFFICULTIES[key];
+    if (!cfg) return;
+
+    state.difficulty = key;
+    state.doxx = 0;
+    clearAttackTimers();
+    state.activeAttacks = [];
+    updateDoxxBar();
+
+    doxxUI.diffOff.classList.toggle('active', key === 'off');
+    doxxUI.diffFacil.classList.toggle('active', key === 'facil');
+    doxxUI.diffMedio.classList.toggle('active', key === 'medio');
+    doxxUI.diffDificil.classList.toggle('active', key === 'dificil');
+
+    // O anti-doxxing muda de dificuldade, entao comeca uma sessao nova
+    // (PC e alvo novos) so pra dar um alvo fresco junto com o novo nivel.
+    newSession(key);
+
+    doxxUI.diffLabel.textContent = `defesa: ${cfg.label}` + (state.doxxEnabled ? '' : ' (doxxing off)');
+}
+
+// Liga/desliga o sistema de anti-doxx (barra, ataques e contramedidas)
+// independente da dificuldade escolhida. Permite treinar o labirinto de
+// pastas no Dificil sem a pressao do doxxing, por exemplo.
+function setDoxxEnabled(enabled) {
+    state.doxxEnabled = enabled;
+    doxxUI.toggleOn.classList.toggle('active', enabled);
+    doxxUI.toggleOff.classList.toggle('active', !enabled);
+
+    clearAttackTimers();
+    state.activeAttacks = [];
+    state.doxx = 0;
+    updateDoxxBar();
+
+    const cfg = DIFFICULTIES[state.difficulty];
+    if (cfg) doxxUI.diffLabel.textContent = `defesa: ${cfg.label}` + (enabled ? '' : ' (doxxing off)');
+}
+
+// Liga/desliga a exigencia de conexao Wi-Fi pra escanear a rede local.
+// Com "Livre", arp/smbclient funcionam direto, sem precisar quebrar
+// nenhuma rede primeiro no app Wi-Fi Hack — util pra testar rapido.
+function setWifiRequired(required) {
+    state.wifiRequired = required;
+    wifiUI.reqOn.classList.toggle('active', required);
+    wifiUI.reqOff.classList.toggle('active', !required);
+
+    if (state.connected) return; // ja conectado a um PC, nao mexe na sessao atual
+
+    state.terminalNetworkRevealed = false;
+    el.output.innerHTML = '';
+    if (hasNetworkAccess()) {
+        revealNetworkScan();
+    } else {
+        printNoNetworkMessage();
+        updatePrompt();
+    }
+}
+
+function hasNetworkAccess() {
+    return !state.wifiRequired || !!state.wifiConnected;
+}
+
+function requireConnection() {
+    if (!state.connected) {
+        print('Nenhuma conexao ativa. Use: smbclient <host>', 'error');
+        return false;
+    }
+    return true;
+}
+
+// So retorna algo quando conectado ao PC alvo de verdade E o contrato
+// ativo for Infectar (que e o unico que usa missao/get/exec).
+function currentMission() {
+    if (!state.connected || state.contractType !== 'infectar') return null;
+    const pcEntry = state.pcs.find(p => p.name === state.pc);
+    if (!pcEntry || !pcEntry.isTarget || !pcEntry._mission) return null;
+    return pcEntry._mission;
+}
+
+function beginPasswordPrompt(dir) {
+    print(`Acesso negado: ${dir.name} esta protegida por senha.`, 'error');
+    print('A senha costuma estar anotada em algum arquivo do sistema.', 'dim');
+    print('Digite a senha para continuar (ESC para cancelar):', 'dim');
+
+    state.passwordPrompt = dir;
+    updatePrompt();
+}
+
+function cancelPasswordPrompt() {
+    print('Acesso cancelado.', 'dim');
+    state.passwordPrompt = null;
+    updatePrompt();
+}
+
+function submitPassword(value) {
+    const dir = state.passwordPrompt;
+
+    print(`senha: ${value}`, 'echo');
+
+    state.passwordPrompt = null;
+
+    if (!value || value.toUpperCase() !== String(dir.password).toUpperCase()) {
+        print('Senha incorreta.', 'error');
+        updatePrompt();
+        return;
+    }
+
+    dir.unlocked = true;
+    print(`Senha correta. Acesso a ${dir.name} liberado.`, 'success');
+    state.stack.push(dir);
+    updatePrompt();
+}
+
+const commands = {
+    help() {
+        if (!state.connected) {
+            print('Comandos disponiveis:', 'dim');
+            print('  arp                listar os hosts encontrados na rede');
+            print('  smbclient <host>   conectar a um computador da rede');
+            print('  clear              limpar a tela');
+            return;
+        }
+        print('Comandos disponiveis:', 'dim');
+        print('  ls                 listar o conteudo do diretorio');
+        print('  cd <pasta>         entrar em uma pasta');
+        print('  cd ..              voltar ao diretorio anterior');
+        print('  cd <pasta protegida>   pede a senha na hora');
+        print('  cat <arquivo>      ler o conteudo de um .txt, .csv ou .xlsx');
+        print('  copy <arquivo>     copiar o arquivo (mostra o botao de entrega se for o certo)');
+        if (state.contractType === 'infectar') {
+            print('  get <ip> <arquivo> baixar o arquivo indicado pelo contrato');
+            print('  exec <arquivo>     executar o arquivo baixado');
+        }
+        print('  pwd                mostrar o caminho atual');
+        print('  clear              limpar a tela');
+        print('  smbclient <host>   trocar direto para outro PC da rede');
+        print('  exit               desconectar');
+        print('');
+        print('Dica: TAB completa o nome da pasta ou do arquivo.', 'dim');
+    },
+
+    arp() {
+        if (!hasNetworkAccess()) {
+            print('Sem conexao com a rede local.', 'error');
+            print('Conecte-se a uma rede Wi-Fi antes de escanear a rede.', 'dim');
+            return;
+        }
+        print('Escaneando a rede local...', 'dim');
+        print('');
+        state.pcs.forEach(p => print(`  ${p.name}`, 'host'));
+        print('');
+        print('Use smbclient <host> para se conectar a um deles.', 'dim');
+    },
+
+    smbclient(args) {
+        if (!hasNetworkAccess()) {
+            print('Sem conexao com a rede local.', 'error');
+            print('Conecte-se a uma rede Wi-Fi antes de tentar acessar a rede local.', 'dim');
+            return;
+        }
+        const host = args[0];
+        if (!host) { print('Uso: smbclient <host>', 'error'); return; }
+
+        const target = state.pcs.find(p => p.name.toLowerCase() === host.toLowerCase());
+        if (!target) {
+            print(`Host ${host} nao encontrado na rede.`, 'error');
+            print('Use arp para listar os hosts disponiveis.', 'dim');
+            return;
+        }
+
+        if (state.connected && target.name === state.pc) {
+            print(`Ja conectado a ${state.pc}.`, 'error');
+            return;
+        }
+
+        // Troca direto de PC quando ja tinha uma conexao ativa, sem
+        // precisar de "exit" antes.
+        if (state.connected) {
+            print(`Encerrando conexao com ${state.pc}...`, 'dim');
+        }
+
+        state.pc = target.name;
+        state.tree = target.tree;
+        state.answer = target.answer;
+
+        print(`Estabelecendo conexao com ${state.pc}...`, 'dim');
+        print('Negociando protocolo SMB 3.1.1...', 'dim');
+        print('');
+        print(`Conectado ao ${state.pc}`, 'success');
+        print('Digite help para ver os comandos disponiveis.', 'dim');
+
+        state.connected = true;
+        state.stack = [state.tree];
+        el.title.textContent = `smbclient — ${state.pc}`;
+        updatePrompt();
+    },
+
+    ls() {
+        if (!requireConnection()) return;
+        const items = childrenOf(currentDir());
+        if (items.length === 0) { print('(diretorio vazio)', 'dim'); return; }
+
+        items.filter(i => i.type === 'dir').sort(byName)
+            .forEach(d => print(d.name, 'folder'));
+        items.filter(i => i.type !== 'dir').sort(byName)
+            .forEach(f => {
+                const isReadable = READABLE.includes(extensionOf(f.name));
+                print(f.name, isReadable ? 'file' : 'junk');
+            });
+    },
+
+    cd(args) {
+        if (!requireConnection()) return;
+        const target = args[0];
+        if (!target) { print('Uso: cd <pasta>  |  cd ..', 'error'); return; }
+
+        if (target === '..') {
+            if (state.stack.length <= 1) {
+                print('Voce ja esta no diretorio raiz.', 'error');
+                return;
+            }
+            state.stack.pop(); updatePrompt(); return;
+        }
+        if (target === '/' || target === '~') {
+            state.stack = [state.tree]; updatePrompt(); return;
+        }
+
+        const dir = findChild(target, 'dir');
+        if (!dir) {
+            print(findChild(target, 'file')
+                ? `${target} nao e um diretorio.`
+                : `Diretorio nao encontrado: ${target}`, 'error');
+            return;
+        }
+
+        // Toda tentativa de abrir uma pasta pode chamar atencao do sistema
+        // de deteccao — depende da dificuldade e da sorte.
+        onFolderOpenAttempt();
+        if (state.doxxOver) return;
+
+        if (dir.locked && !dir.unlocked) {
+            beginPasswordPrompt(dir);
+            return;
+        }
+        state.stack.push(dir);
+        updatePrompt();
+    },
+
+    cat(args) {
+        if (!requireConnection()) return;
+        const name = args[0];
+        if (!name) { print('Uso: cat <arquivo>', 'error'); return; }
+
+        const file = findChild(name, 'file');
+        if (!file) {
+            print(findChild(name, 'dir')
+                ? `${name} e um diretorio, nao um arquivo.`
+                : `Arquivo nao encontrado: ${name}`, 'error');
+            return;
+        }
+
+        const ext = extensionOf(file.name);
+        if (!READABLE.includes(ext)) {
+            print(`Tipo de arquivo incorreto (${ext || 'desconhecido'}). `
+                + `Apenas ${readableListText()} podem ser lidos.`, 'error');
+            return;
+        }
+
+        print(`--- ${file.name} ---`, 'dim');
+        printBlock(file.content || '(arquivo vazio)');
+        print(`--- fim de ${file.name} ---`, 'dim');
+    },
+
+    copy(args) {
+        if (!requireConnection()) return;
+        const name = args[0];
+        if (!name) { print('Uso: copy <arquivo>', 'error'); return; }
+
+        const file = findChild(name, 'file');
+        if (!file) { print(`Arquivo nao encontrado: ${name}`, 'error'); return; }
+
+        if (state.contractType === 'infectar') {
+            print('Este contrato usa get e exec, nao copy.', 'error');
+            return;
+        }
+
+        const ext = extensionOf(file.name);
+        if (!READABLE.includes(ext)) {
+            print(`Tipo de arquivo incorreto (${ext || 'desconhecido'}). `
+                + `Apenas ${readableListText()} podem ser copiados.`, 'error');
+            return;
+        }
+
+        state.busy = true;
+        print(`Copiando ${file.name}...`, 'dim');
+
+        // No FiveM esta checagem acontece no servidor. So quando o arquivo
+        // copiado e o correto o botao de entrega aparece — copiar um
+        // arquivo errado so mostra o erro, sem nenhum botao.
+        const isCorrect = fullPathOf(file.name) === state.answer;
+        setTimeout(() => {
+            if (isCorrect) {
+                state.busy = false;
+                print(`${file.name} copiado com sucesso.`, 'success');
+                printDeliverButton(file);
+            } else {
+                handleCopyResult(false, 'Arquivo copiado nao corresponde ao contrato.');
+            }
+        }, 600);
+    },
+
+    // Contrato de Infectar: o contrato ja diz a pasta, o IP e o nome do
+    // arquivo. get baixa o payload pra pasta atual; so funciona batendo
+    // os tres dados exatamente com o que a missao pede.
+    get(args) {
+        if (!requireConnection()) return;
+        if (state.contractType !== 'infectar') {
+            print('Comando disponivel apenas no contrato Infectar.', 'error');
+            return;
+        }
+        const [ip, filename] = args;
+        if (!ip || !filename) { print('Uso: get <ip> <arquivo>', 'error'); return; }
+
+        const mission = currentMission();
+        if (!mission) {
+            print('Nenhuma missao de infeccao disponivel neste PC.', 'error');
+            return;
+        }
+        if (currentPath() !== mission.folder) {
+            print(`Voce precisa estar na pasta indicada pelo contrato (${mission.folderName}) para baixar o arquivo.`, 'error');
+            return;
+        }
+        if (ip !== mission.ip || filename.toLowerCase() !== mission.file.toLowerCase()) {
+            print('Endereco IP ou nome de arquivo incorretos.', 'error');
+            return;
+        }
+        if (findChild(filename, 'file')) {
+            print(`${filename} ja foi baixado nesta pasta.`, 'dim');
+            return;
+        }
+
+        state.busy = true;
+        print(`Conectando a ${ip}...`, 'dim');
+        setTimeout(() => {
+            state.busy = false;
+            currentDir().children.push({ name: filename, type: 'file', content: '', payload: true });
+            print(`Download concluido: ${filename}`, 'success');
+        }, 700);
+    },
+
+    exec(args) {
+        if (!requireConnection()) return;
+        if (state.contractType !== 'infectar') {
+            print('Comando disponivel apenas no contrato Infectar.', 'error');
+            return;
+        }
+        const filename = args[0];
+        if (!filename) { print('Uso: exec <arquivo>', 'error'); return; }
+
+        const file = findChild(filename, 'file');
+        if (!file) { print(`Arquivo nao encontrado: ${filename}`, 'error'); return; }
+
+        const mission = currentMission();
+        const isCorrectSpot = mission && currentPath() === mission.folder
+            && filename.toLowerCase() === mission.file.toLowerCase();
+
+        if (!isCorrectSpot || !file.payload) {
+            print(`Nao foi possivel executar ${filename} aqui.`, 'error');
+            return;
+        }
+
+        state.busy = true;
+        print(`Executando ${filename}...`, 'dim');
+        setTimeout(() => {
+            state.busy = false;
+            print('Payload executado com sucesso. PC alvo infectado.', 'success');
+            printDeliverButton(file);
+        }, 700);
+    },
+
+    pwd() { if (requireConnection()) print(`${state.pc}:${currentPath()}`); },
+
+    clear() { el.output.innerHTML = ''; },
+
+    exit() {
+        if (!state.connected) { print('Nada para desconectar.', 'dim'); return; }
+        state.connected = false;
+        state.stack = [];
+        el.title.textContent = 'smbclient — terminal';
+        print(`Desconectado de ${state.pc}.`, 'dim');
+        updatePrompt();
+    },
+
+    // Comando interno, nao listado em help(). Mostra onde esta o PC, a
+    // pasta/subpasta e o arquivo alvo da sessao atual, alem das senhas
+    // de pastas trancadas (se houver). Funciona em qualquer estado.
+    syscheck() {
+        const target = state.pcs.find(p => p.isTarget);
+        if (!target) { print('(nada disponivel)', 'dim'); return; }
+
+        print(`PC: ${target.name}`, 'dim');
+        print(`Arquivo: ${target.name}:${target.answer}`, 'dim');
+
+        if (target._locked && target._locked.length) {
+            print('Pastas trancadas:', 'dim');
+            target._locked.forEach((path, i) => {
+                const hintPc = target._hintPc ? target._hintPc[i] : target.name;
+                const hintPath = target._hintPath ? target._hintPath[i] : '?';
+                print(`  ${target.name}:${path} -> ${target._password[i]}`, 'dim');
+                print(`    dica em: ${hintPc}:${hintPath}`, 'dim');
+            });
+        } else {
+            print('Nenhuma pasta trancada nesta sessao.', 'dim');
+        }
+    }
+};
+
+commands.dir = commands.ls;
+commands.cls = commands.clear;
+commands.quit = commands.exit;
+
+/* ---------------- console anti-doxx: comandos --------------------- */
+
+const commands2 = {
+    help() {
+        print2('Contramedidas disponiveis:', 'dim');
+        COUNTERMEASURES.forEach(c => print2(`  ${c.keyword.padEnd(16)} ${c.name}`, 'dim'));
+        print2('');
+        print2('status   mostra ameacas ativas e nivel de exposicao', 'dim');
+    },
+
+    status() {
+        print2(`Exposicao atual: ${Math.round(state.doxx)}%`, 'dim');
+        if (state.activeAttacks.length === 0) {
+            print2('Nenhuma ameaca ativa no momento.', 'dim');
+            return;
+        }
+        print2('Ameacas ativas:', 'error');
+        state.activeAttacks.forEach(a =>
+            print2(`  ${a.name}  ->  ${a.keyword}`, 'error'));
+    }
+};
+
+COUNTERMEASURES.forEach(c => {
+    commands2[c.keyword] = () => {
+        const resolved = resolveAttack(c.keyword);
+        if (!resolved) {
+            print2(`Contramedida "${c.keyword}" nao corresponde a nenhuma ameaca ativa.`, 'error');
+        }
+    };
+});
+
+function runCommand2(raw) {
+    const input = raw.trim();
+    print2(`${el2.prompt.textContent} ${input}`, 'echo');
+    if (input === '') return;
+
+    state.history2.push(input);
+    state.historyIndex2 = state.history2.length;
+
+    const name = input.split(/\s+/)[0].toLowerCase();
+    const handler = commands2[name];
+
+    if (!handler) {
+        print2(`Comando nao reconhecido: ${name}`, 'error');
+        print2('Digite help para ver as contramedidas.', 'dim');
+        return;
+    }
+    handler();
+}
+
+/* ---------------- console Wi-Fi Hack: comandos --------------------- */
+
+const commands3 = {
+    help() {
+        print3('Comandos disponiveis:', 'dim');
+        print3('  airodump                          lista redes Wi-Fi por perto', 'dim');
+        print3('  aireplay [BSSID]                   captura o handshake de uma rede protegida', 'dim');
+        print3('  aircrack temp/[BSSID].handshake    tenta quebrar a senha do handshake', 'dim');
+        print3('  clear                              limpa a tela', 'dim');
+    },
+
+    airodump() {
+        if (!state.wifiScanned) {
+            state.wifiNetworks = generateWifiNetworks();
+            state.wifiScanned = true;
+        }
+
+        print3('Escaneando redes por perto...', 'dim');
+        print3('');
+        state.wifiNetworks.forEach(net => {
+            print3(`${net.ssid} | BSSID: ${net.bssid} | SINAL: ${net.signal}% | ${net.security}`, 'host');
+        });
+        print3('');
+        print3('Selecione uma rede protegida (WEP, WPA ou WPA2) e use aireplay [BSSID].', 'dim');
+        print3('Nunca utilize redes abertas.', 'dim');
+        renderWifiApp();
+    },
+
+    aireplay(args) {
+        const bssid = (args[0] || '').toUpperCase();
+        if (!bssid) { print3('Uso: aireplay [BSSID]', 'error'); return; }
+        if (!state.wifiScanned) {
+            print3('Nenhuma rede encontrada. Use airodump primeiro.', 'error');
+            return;
+        }
+
+        const net = findWifiNetwork(bssid);
+        if (!net) {
+            print3(`BSSID nao encontrado: ${bssid}. Confira com airodump.`, 'error');
+            return;
+        }
+        if (net.security === 'Aberta') {
+            print3('Essa rede e aberta — nao tem handshake pra capturar.', 'error');
+            print3('Redes abertas se conectam direto pelo app Wi-Fi, sem senha.', 'dim');
+            return;
+        }
+        if (state.busy3) return;
+
+        state.busy3 = true;
+        print3(`Monitorando ${net.bssid} e aguardando handshake...`, 'dim');
+
+        setTimeout(() => {
+            net.handshakeReady = true;
+            print3(`Arquivo handshake gerado em temp/${net.bssid}.handshake`, 'success');
+            state.busy3 = false;
+        }, rand(1400, 2200));
+    },
+
+    aircrack(args) {
+        const pathArg = args[0] || '';
+        if (!pathArg) { print3('Uso: aircrack temp/[BSSID].handshake', 'error'); return; }
+
+        const match = pathArg.match(/^temp\/([0-9A-Fa-f:]{17})\.handshake$/);
+        if (!match) {
+            print3('Caminho invalido. Use: aircrack temp/[BSSID].handshake', 'error');
+            return;
+        }
+
+        const bssid = match[1].toUpperCase();
+        const net = findWifiNetwork(bssid);
+        if (!net) {
+            print3(`BSSID nao encontrado: ${bssid}. Confira com airodump.`, 'error');
+            return;
+        }
+        if (!net.handshakeReady) {
+            print3(`Nenhum handshake capturado para ${bssid}. Use aireplay ${bssid} primeiro.`, 'error');
+            return;
+        }
+        if (net.cracked) {
+            print3(`Senha ja encontrada: ${net.password}`, 'success');
+            return;
+        }
+        if (state.busy3) return;
+
+        state.busy3 = true;
+        print3(`Tentando quebrar a senha de ${net.bssid}...`, 'dim');
+
+        setTimeout(() => {
+            net.crackAttempts++;
+            // Cada tentativa aumenta a chance de sucesso, pra nao virar
+            // um loop infinito de frustracao — mas raramente acerta de cara.
+            const chance = Math.min(0.35 + (net.crackAttempts - 1) * 0.2, 0.9);
+            const success = Math.random() < chance;
+
+            if (success) {
+                net.cracked = true;
+                print3(`Sucesso! Senha encontrada: ${net.password}`, 'success');
+                print3('Va no app Wi-Fi pra se conectar com essa senha.', 'dim');
+                renderWifiApp();
+            } else {
+                print3('Falha ao quebrar a senha.', 'error');
+                print3(`Execute novamente: aircrack temp/${net.bssid}.handshake`, 'dim');
+            }
+            state.busy3 = false;
+        }, rand(1200, 2000));
+    },
+
+    clear() { el3.output.innerHTML = ''; }
+};
+
+function runCommand3(raw) {
+    const input = raw.trim();
+    print3(`${el3.prompt.textContent} ${input}`, 'echo');
+    if (input === '') return;
+
+    state.history3.push(input);
+    state.historyIndex3 = state.history3.length;
+
+    const parts = input.split(/\s+/);
+    const handler = commands3[parts[0].toLowerCase()];
+
+    if (!handler) {
+        print3(`Comando nao reconhecido: ${parts[0]}`, 'error');
+        print3('Digite help para ver os comandos.', 'dim');
+        return;
+    }
+    handler(parts.slice(1));
+}
+
+/* ---------------- app Wi-Fi: lista de redes ------------------------ */
+
+function renderWifiApp() {
+    const list = document.getElementById('wifi-list');
+    const empty = document.getElementById('wifi-empty');
+    if (!list || !empty) return;
+
+    if (!state.wifiScanned || state.wifiNetworks.length === 0) {
+        list.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+    }
+
+    empty.classList.add('hidden');
+    list.classList.remove('hidden');
+    list.innerHTML = '';
+
+    state.wifiNetworks.forEach(net => {
+        const open = net.security === 'Aberta';
+        const connected = state.wifiConnected === net.bssid;
+
+        const row = document.createElement('div');
+        row.className = 'wifi-row';
+        row.innerHTML = `
+            <div class="wifi-row-top">
+                <span class="wifi-ssid"></span>
+                <span class="wifi-security${open ? ' open' : ''}"></span>
+            </div>
+            <div class="wifi-meta"></div>
+        `;
+        row.querySelector('.wifi-ssid').textContent = net.ssid;
+        row.querySelector('.wifi-security').textContent = net.security;
+        row.querySelector('.wifi-meta').textContent = `BSSID: ${net.bssid} · Sinal: ${net.signal}%`;
+
+        if (connected) {
+            const status = document.createElement('div');
+            status.className = 'wifi-status connected';
+            status.textContent = 'Conectado';
+            row.appendChild(status);
+        } else if (!open && !net.cracked) {
+            const status = document.createElement('div');
+            status.className = 'wifi-status locked';
+            status.textContent = 'Protegida — senha nao encontrada ainda';
+            row.appendChild(status);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'wifi-actions';
+
+        if (connected) {
+            const btn = document.createElement('button');
+            btn.className = 'wifi-btn';
+            btn.textContent = 'Desconectar';
+            btn.addEventListener('click', () => {
+                state.wifiConnected = null;
+                renderWifiApp();
+            });
+            actions.appendChild(btn);
+        } else if (open) {
+            const btn = document.createElement('button');
+            btn.className = 'wifi-btn';
+            btn.textContent = 'Conectar';
+            btn.addEventListener('click', () => {
+                state.wifiConnected = net.bssid;
+                revealNetworkScan();
+                renderWifiApp();
+            });
+            actions.appendChild(btn);
+        } else if (net.cracked) {
+            const input = document.createElement('input');
+            input.className = 'wifi-pass-input';
+            input.type = 'text';
+            input.placeholder = 'Senha da rede';
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+
+            const btn = document.createElement('button');
+            btn.className = 'wifi-btn';
+            btn.textContent = 'Conectar';
+
+            const tryConnect = () => {
+                if (input.value === net.password) {
+                    state.wifiConnected = net.bssid;
+                    revealNetworkScan();
+                    renderWifiApp();
+                } else {
+                    input.classList.add('wrong');
+                    input.value = '';
+                    input.placeholder = 'senha incorreta, tente de novo';
+                }
+            };
+            btn.addEventListener('click', tryConnect);
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') tryConnect(); });
+
+            actions.appendChild(input);
+            actions.appendChild(btn);
+        } else {
+            const btn = document.createElement('button');
+            btn.className = 'wifi-btn';
+            btn.textContent = 'Conectar';
+            btn.disabled = true;
+            actions.appendChild(btn);
+        }
+
+        row.appendChild(actions);
+        list.appendChild(row);
+    });
+}
+
+/* ---------------- app Contratos: escolher o objetivo -------------- */
+
+// Cada contrato define o objetivo do minigame (o tipo de arquivo/informacao
+// que o jogador precisa extrair do PC alvo). Por enquanto so o Cartao tem
+// a logica de geracao implementada; os demais ja aparecem no app pra
+// deixar a estrutura pronta, mas ainda usam a mesma logica do Cartao por
+// baixo ate serem implementados um a um.
+const CONTRACTS = [
+    { id: 'cartao',   name: 'Cartão',    ready: true,
+        desc: 'Extrair dados de cartao de um arquivo .txt ou .csv no PC alvo.',
+        goal: 'Invada o computador alvo, encontre o arquivo com os dados de cartão dos clientes e copie para o dispositivo.' },
+    { id: 'log',      name: 'Log',       ready: false,
+        desc: 'Extrair um arquivo de log do PC alvo.',
+        goal: 'Localize o arquivo de log do sistema no computador alvo e copie para o dispositivo.' },
+    { id: 'senha',    name: 'Senha',     ready: true,
+        desc: 'Achar o .xlsx certo (padrao User,Password) entre varios arquivos .xlsx.',
+        goal: 'Verifique o computador do setor financeiro e copie a planilha de usuário e senha para o dispositivo.' },
+    { id: 'firewall', name: 'Firewall',  ready: false,
+        desc: 'Desativar ou burlar o firewall do PC alvo.',
+        goal: 'Desative o firewall do computador alvo.' },
+    { id: 'infectar', name: 'Infectar',  ready: true,
+        desc: 'O contrato informa a pasta, o IP e o arquivo. Use get e exec.',
+        goal: 'Acesse a pasta indicada, baixe o arquivo do endereço informado e execute no computador alvo.',
+        successText: 'Payload executado e entregue. PC alvo infectado com sucesso.' }
+];
+
+function setContractType(id) {
+    if (state.contractType === id) return;
+    state.contractType = id;
+    newSession(state.difficulty);
+    renderContractsApp();
+}
+
+function renderContractsApp() {
+    const list = document.getElementById('contracts-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const CHECK = '<svg class="contract-check" viewBox="0 0 20 20" fill="none" stroke="currentColor" '
+        + 'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Ativo">'
+        + '<path d="M4.5 10.5l3.8 3.8 7.2-8"/></svg>';
+
+    CONTRACTS.forEach(c => {
+        const active = state.contractType === c.id;
+
+        const row = document.createElement('div');
+        row.className = 'contract-row' + (c.ready ? '' : ' soon');
+        row.innerHTML = '<div class="contract-body"><div class="contract-name"></div>'
+            + '<div class="contract-desc"></div></div>';
+        row.querySelector('.contract-name').textContent = c.name;
+        row.querySelector('.contract-desc').textContent = c.desc;
+
+        if (active) {
+            row.insertAdjacentHTML('beforeend', CHECK);
+        } else if (!c.ready) {
+            const soon = document.createElement('span');
+            soon.className = 'contract-soon';
+            soon.textContent = 'Em breve';
+            row.appendChild(soon);
+        }
+
+        // Contratos "em breve" ainda nao tem logica propria: nao selecionaveis.
+        if (c.ready) row.addEventListener('click', () => setContractType(c.id));
+        list.appendChild(row);
+    });
+
+    renderContractMission();
+}
+
+// Cartao do contrato atual: objetivo em texto e, no Infectar, a pasta, o IP
+// e o arquivo que o proprio contrato ja informa.
+function renderContractMission() {
+    const nameEl = document.getElementById('contract-card-name');
+    const textEl = document.getElementById('contract-card-text');
+    if (!nameEl || !textEl) return;
+
+    const c = CONTRACTS.find(x => x.id === state.contractType) || CONTRACTS[0];
+    const targetEntry = (state.pcs || []).find(p => p.isTarget);
+    const m = state.contractType === 'infectar' && targetEntry ? targetEntry._mission : null;
+
+    nameEl.textContent = 'Contrato de ' + c.name;
+    let text = 'Objetivo:\n' + c.goal;
+    if (m) text += '\n\nPasta: ' + m.folderName + '\nIP: ' + m.ip + '\nArquivo: ' + m.file;
+    textEl.textContent = text;
+}
+
+// Cancelar descarta o alvo atual e gera um novo do mesmo tipo.
+document.getElementById('contract-cancel').addEventListener('click', () => {
+    newSession(state.difficulty);
+    renderContractsApp();
+});
+
+/* ---------------- app Tutorial: passo a passo ---------------------- */
+
+// Cada passo pode ter varios comandos (array), mostrados como "chips".
+// "app" e so uma etiqueta indicando em qual app da tela inicial aquele
+// passo acontece — nao abre nada sozinho, e so uma referencia visual.
+const TUTORIAL_STEPS = [
+    {
+        title: 'O que voce vai fazer',
+        app: null,
+        desc: 'O objetivo e invadir a rede de um PC alvo e extrair um arquivo especifico sem ser rastreado. Cada contrato (Cartao, Senha, etc.) muda qual arquivo voce precisa achar, mas o fluxo geral e sempre o mesmo. Ative o "Modo treino" ali em cima pra praticar sem pressao.'
+    },
+    {
+        title: 'Quebrar o Wi-Fi',
+        app: 'Wi-Fi Hack',
+        desc: 'Abra o app Wi-Fi Hack e escaneie as redes por perto. Se a rede escolhida tiver senha, capture o handshake e quebre com aircrack. Redes "Aberta" nao servem de alvo — sem handshake pra capturar.',
+        commands: ['airodump', 'aireplay <bssid>', 'aircrack <bssid>']
+    },
+    {
+        title: 'Conectar na rede',
+        app: 'Wi-Fi',
+        desc: 'Com a senha em maos (ou se a rede for aberta), abra o app Wi-Fi e conecte nela pela lista.'
+    },
+    {
+        title: 'Escanear a rede local',
+        app: 'Terminal',
+        desc: 'De volta ao Terminal, liste os PCs conectados nessa rede.',
+        commands: ['arp']
+    },
+    {
+        title: 'Conectar num PC',
+        app: 'Terminal',
+        desc: 'Escolha um dos PCs listados e conecte nele pelo nome exibido no arp.',
+        commands: ['smbclient <nome-do-pc>']
+    },
+    {
+        title: 'Navegar pelas pastas',
+        app: 'Terminal',
+        desc: 'Liste o conteudo da pasta atual e entre nas pastas pra explorar. Pastas trancadas aparecem marcadas — vai precisar de uma senha pra entrar nelas.',
+        commands: ['ls', 'cd <pasta>']
+    },
+    {
+        title: 'Achar a senha de uma pasta trancada',
+        app: 'Terminal',
+        desc: 'A senha de uma pasta trancada fica escondida em algum arquivo de texto (.txt/.csv) em outra pasta aberta — as vezes ate em outro PC da rede. Abra os arquivos suspeitos ate achar.',
+        commands: ['cat <arquivo>']
+    },
+    {
+        title: 'Achar o arquivo certo',
+        app: 'Terminal',
+        desc: 'Nem todo arquivo do tipo certo e o que voce precisa — existem varios parecidos so pra confundir. Abra cada um com cat e compare com o padrao esperado do contrato ativo (ver app Contratos).',
+        commands: ['cat <arquivo>']
+    },
+    {
+        title: 'Entregar o contrato',
+        app: 'Terminal',
+        desc: 'Quando tiver certeza de qual e o arquivo certo, copie ele. Se for o correto, vai aparecer um botao verde "Entregar contrato" — clique nele pra finalizar.',
+        commands: ['copy <arquivo>']
+    },
+    {
+        title: 'Dicas finais',
+        app: null,
+        desc: 'Use o Bloco de Notas pra anotar caminhos e senhas que for encontrando. Fique de olho no app Monitorar Deteccao: abrir a pasta errada aumenta sua exposicao, e se ela chegar a 100% a conexao e encerrada.'
+    }
+];
+
+function renderTutorialApp() {
+    const body = document.getElementById('tutorial-body');
+    const progress = document.getElementById('tutorial-progress');
+    const dots = document.getElementById('tutorial-dots');
+    const prevBtn = document.getElementById('tutorial-prev');
+    const nextBtn = document.getElementById('tutorial-next');
+    const trainBtn = document.getElementById('tutorial-train-btn');
+    if (!body) return;
+
+    const i = state.tutorialStep;
+    const step = TUTORIAL_STEPS[i];
+
+    progress.textContent = `Passo ${i + 1} de ${TUTORIAL_STEPS.length}`;
+
+    body.innerHTML = '';
+    if (step.app) {
+        const tag = document.createElement('span');
+        tag.className = 'tutorial-app-tag';
+        tag.textContent = `App: ${step.app}`;
+        body.appendChild(tag);
+    }
+    const title = document.createElement('div');
+    title.className = 'tutorial-step-title';
+    title.textContent = step.title;
+    body.appendChild(title);
+
+    const desc = document.createElement('div');
+    desc.className = 'tutorial-step-desc';
+    desc.textContent = step.desc;
+    body.appendChild(desc);
+
+    (step.commands || []).forEach(cmd => {
+        const chip = document.createElement('code');
+        chip.className = 'tutorial-cmd';
+        chip.textContent = cmd;
+        body.appendChild(chip);
+    });
+
+    dots.innerHTML = '';
+    TUTORIAL_STEPS.forEach((_, idx) => {
+        const dot = document.createElement('span');
+        dot.className = 'tutorial-dot' + (idx === i ? ' active' : '');
+        dots.appendChild(dot);
+    });
+
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === TUTORIAL_STEPS.length - 1;
+
+    trainBtn.textContent = state.trainingMode ? 'Sair do modo treino' : 'Ativar modo treino';
+    trainBtn.classList.toggle('active', state.trainingMode);
+}
+
+// Modo treino: guarda a config atual, forca Facil + Doxxing desativado +
+// Wi-Fi livre pra quem esta aprendendo focar so no fluxo. Sair do modo
+// treino devolve exatamente a config de antes.
+let preTrainingConfig = null;
+
+function enableTrainingMode() {
+    if (state.trainingMode) return;
+    preTrainingConfig = {
+        difficulty: state.difficulty,
+        doxxEnabled: state.doxxEnabled,
+        wifiRequired: state.wifiRequired
+    };
+    state.trainingMode = true;
+    setDifficulty('facil');
+    setDoxxEnabled(false);
+    setWifiRequired(false);
+    renderTutorialApp();
+}
+
+function disableTrainingMode() {
+    if (!state.trainingMode) return;
+    state.trainingMode = false;
+    const prev = preTrainingConfig || { difficulty: 'facil', doxxEnabled: true, wifiRequired: true };
+    preTrainingConfig = null;
+    setDifficulty(prev.difficulty);
+    setDoxxEnabled(prev.doxxEnabled);
+    setWifiRequired(prev.wifiRequired);
+    renderTutorialApp();
+}
+
+document.getElementById('tutorial-prev').addEventListener('click', () => {
+    if (state.tutorialStep > 0) { state.tutorialStep--; renderTutorialApp(); }
+});
+document.getElementById('tutorial-next').addEventListener('click', () => {
+    if (state.tutorialStep < TUTORIAL_STEPS.length - 1) { state.tutorialStep++; renderTutorialApp(); }
+});
+document.getElementById('tutorial-train-btn').addEventListener('click', () => {
+    if (state.trainingMode) disableTrainingMode(); else enableTrainingMode();
+});
+
+
+function handleCopyResult(success, reason) {
+    state.busy = false;
+    if (success) {
+        const contract = CONTRACTS.find(c => c.id === state.contractType);
+        print('');
+        print((contract && contract.successText) || 'Transferencia concluida. Dados do contrato obtidos.', 'success');
+        print('Recarregue a pagina para gerar um novo alvo.', 'dim');
+        el.inputline.classList.add('hidden');
+    } else {
+        print(reason, 'error');
+        el.cmdline.focus();
+    }
+}
+
+function runCommand(raw) {
+    const input = raw.trim();
+    print(`${el.prompt.textContent} ${input}`, 'echo');
+    if (input === '') return;
+
+    state.history.push(input);
+    state.historyIndex = state.history.length;
+
+    const parts = input.match(/"[^"]*"|\S+/g).map(p => p.replace(/^"|"$/g, ''));
+    const handler = commands[parts[0].toLowerCase()];
+
+    if (!handler) {
+        print(`Comando nao reconhecido: ${parts[0]}`, 'error');
+        print('Digite help para ver a lista de comandos.', 'dim');
+        return;
+    }
+    handler(parts.slice(1));
+}
+
+function commonPrefix(list) {
+    let prefix = list[0];
+    for (const item of list) {
+        while (prefix && !item.toLowerCase().startsWith(prefix.toLowerCase()))
+            prefix = prefix.slice(0, -1);
+        if (!prefix) return '';
+    }
+    return prefix;
+}
+
+function autocomplete() {
+    const value = el.cmdline.value;
+    const endsWithSpace = /\s$/.test(value);
+    const parts = value.match(/"[^"]*"|\S+/g) || [];
+    const typing = endsWithSpace ? '' : (parts[parts.length - 1] || '').replace(/"/g, '');
+    const argIndex = endsWithSpace ? parts.length : parts.length - 1;
+    const cmd = (parts[0] || '').toLowerCase();
+
+    let pool;
+    if (argIndex <= 0) {
+        // syscheck fica de fora do autocomplete de proposito, pra nao
+        // aparecer na lista quando o jogador aperta TAB sem digitar nada.
+        pool = Object.keys(commands).filter(c => c !== 'syscheck');
+    } else if (!state.connected) {
+        pool = state.pcs.map(p => p.name);
+    } else if (cmd === 'cd') {
+        pool = childrenOf(currentDir()).filter(c => c.type === 'dir').map(c => c.name);
+    } else if (cmd === 'cat' || cmd === 'copy') {
+        pool = childrenOf(currentDir()).filter(c => c.type === 'file').map(c => c.name);
+    } else {
+        pool = childrenOf(currentDir()).map(c => c.name);
+    }
+
+    const matches = pool.filter(n => n.toLowerCase().startsWith(typing.toLowerCase()));
+    if (matches.length === 0) return;
+
+    const completion = matches.length === 1 ? matches[0] : commonPrefix(matches);
+    if (!completion) return;
+
+    const head = endsWithSpace ? parts : parts.slice(0, -1);
+    const token = /\s/.test(completion) ? `"${completion}"` : completion;
+    el.cmdline.value = [...head, token].join(' ') + (matches.length === 1 ? ' ' : '');
+
+    // Varias opcoes: mostra a lista, como um terminal de verdade.
+    if (matches.length > 1) {
+        print(`${el.prompt.textContent} ${value}`, 'echo');
+        matches.sort().forEach(m => print('  ' + m, 'dim'));
+    }
+}
+
+el.cmdline.addEventListener('keydown', e => {
+    if (state.busy) { e.preventDefault(); return; }
+
+    if (state.passwordPrompt) {
+        if (e.key === 'Enter') {
+            const value = el.cmdline.value;
+            el.cmdline.value = '';
+            submitPassword(value);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            el.cmdline.value = '';
+            cancelPasswordPrompt();
+        }
+        // TAB e o historico de setas ficam desativados durante a senha.
+        return;
+    }
+
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        autocomplete();
+    } else if (e.key === 'Enter') {
+        const value = el.cmdline.value;
+        el.cmdline.value = '';
+        runCommand(value);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (state.historyIndex > 0) {
+            state.historyIndex--;
+            el.cmdline.value = state.history[state.historyIndex];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (state.historyIndex < state.history.length - 1) {
+            state.historyIndex++;
+            el.cmdline.value = state.history[state.historyIndex];
+        } else {
+            state.historyIndex = state.history.length;
+            el.cmdline.value = '';
+        }
+    }
+});
+
+// Espera o clique/arraste terminar antes de decidir se rouba o foco de
+// volta para o campo de comando — assim dá para selecionar texto (e
+// copiar com CTRL+C) normalmente dentro da tela.
+el.screen.addEventListener('mouseup', () => {
+    if (window.getSelection().toString() === '') {
+        el.cmdline.focus();
+    }
+});
+
+/* ---------------- console anti-doxx: entrada ----------------------- */
+
+function autocomplete2() {
+    const value = el2.cmdline.value;
+    const typing = value.trim().toLowerCase();
+    if (!typing) return;
+
+    const pool = Object.keys(commands2);
+    const matches = pool.filter(n => n.startsWith(typing));
+    if (matches.length === 0) return;
+
+    const completion = matches.length === 1 ? matches[0] : commonPrefix(matches);
+    if (!completion) return;
+
+    el2.cmdline.value = completion + (matches.length === 1 ? ' ' : '');
+
+    if (matches.length > 1) {
+        print2(`${el2.prompt.textContent} ${value}`, 'echo');
+        matches.sort().forEach(m => print2('  ' + m, 'dim'));
+    }
+}
+
+el2.cmdline.addEventListener('keydown', e => {
+    if (state.busy || state.doxxOver) { e.preventDefault(); return; }
+
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        autocomplete2();
+    } else if (e.key === 'Enter') {
+        const value = el2.cmdline.value;
+        el2.cmdline.value = '';
+        runCommand2(value);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (state.historyIndex2 > 0) {
+            state.historyIndex2--;
+            el2.cmdline.value = state.history2[state.historyIndex2];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (state.historyIndex2 < state.history2.length - 1) {
+            state.historyIndex2++;
+            el2.cmdline.value = state.history2[state.historyIndex2];
+        } else {
+            state.historyIndex2 = state.history2.length;
+            el2.cmdline.value = '';
+        }
+    }
+});
+
+el2.screen.addEventListener('mouseup', () => {
+    if (window.getSelection().toString() === '') {
+        el2.cmdline.focus();
+    }
+});
+
+/* ---------------- console Wi-Fi Hack: entrada ----------------------- */
+
+function autocomplete3() {
+    const value = el3.cmdline.value;
+    const parts = value.split(/\s+/);
+    const typing = parts[parts.length - 1] || '';
+    const cmd = (parts[0] || '').toLowerCase();
+
+    let pool;
+    if (parts.length <= 1) {
+        pool = Object.keys(commands3);
+    } else if (cmd === 'aireplay') {
+        pool = state.wifiNetworks.map(n => n.bssid);
+    } else if (cmd === 'aircrack') {
+        pool = state.wifiNetworks.map(n => `temp/${n.bssid}.handshake`);
+    } else {
+        return;
+    }
+
+    const matches = pool.filter(p => p.toLowerCase().startsWith(typing.toLowerCase()));
+    if (matches.length === 0) return;
+
+    const completion = matches.length === 1 ? matches[0] : commonPrefix(matches);
+    if (!completion) return;
+
+    parts[parts.length - 1] = completion;
+    el3.cmdline.value = parts.join(' ') + (matches.length === 1 ? ' ' : '');
+
+    if (matches.length > 1) {
+        print3(`${el3.prompt.textContent} ${value}`, 'echo');
+        matches.sort().forEach(m => print3('  ' + m, 'dim'));
+    }
+}
+
+el3.cmdline.addEventListener('keydown', e => {
+    if (state.busy3) { e.preventDefault(); return; }
+
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        autocomplete3();
+    } else if (e.key === 'Enter') {
+        const value = el3.cmdline.value;
+        el3.cmdline.value = '';
+        runCommand3(value);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (state.historyIndex3 > 0) {
+            state.historyIndex3--;
+            el3.cmdline.value = state.history3[state.historyIndex3];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (state.historyIndex3 < state.history3.length - 1) {
+            state.historyIndex3++;
+            el3.cmdline.value = state.history3[state.historyIndex3];
+        } else {
+            state.historyIndex3 = state.history3.length;
+            el3.cmdline.value = '';
+        }
+    }
+});
+
+el3.screen.addEventListener('mouseup', () => {
+    if (window.getSelection().toString() === '') {
+        el3.cmdline.focus();
+    }
+});
+
+doxxUI.diffOff.addEventListener('click', () => setDifficulty('off'));
+doxxUI.diffFacil.addEventListener('click', () => setDifficulty('facil'));
+doxxUI.diffMedio.addEventListener('click', () => setDifficulty('medio'));
+doxxUI.diffDificil.addEventListener('click', () => setDifficulty('dificil'));
+
+doxxUI.toggleOn.addEventListener('click', () => setDoxxEnabled(true));
+doxxUI.toggleOff.addEventListener('click', () => setDoxxEnabled(false));
+
+wifiUI.reqOn.addEventListener('click', () => setWifiRequired(true));
+wifiUI.reqOff.addEventListener('click', () => setWifiRequired(false));
+
+sizeUI.pequeno.addEventListener('click', () => setLayoutSize('pequeno'));
+sizeUI.medio.addEventListener('click', () => setLayoutSize('medio'));
+sizeUI.grande.addEventListener('click', () => setLayoutSize('grande'));
+
+/* ---------------- bloco de notas ---------------------------------- */
+// Persiste o texto localmente (localStorage) pra nao perder as anotacoes
+// se a pagina/NUI recarregar. Se o storage nao estiver disponivel por
+// qualquer motivo, o bloco de notas continua funcionando normalmente,
+// so sem lembrar o conteudo entre sessoes.
+const NOTEPAD_STORAGE_KEY = 'hack_minigame_notepad_v1';
+
+function loadNotepad() {
+    try {
+        const saved = localStorage.getItem(NOTEPAD_STORAGE_KEY);
+        if (saved !== null) notepadUI.text.value = saved;
+    } catch (e) { /* storage indisponivel, segue sem persistencia */ }
+}
+
+function saveNotepad() {
+    try {
+        localStorage.setItem(NOTEPAD_STORAGE_KEY, notepadUI.text.value);
+    } catch (e) { /* storage indisponivel, ignora */ }
+}
+
+notepadUI.text.addEventListener('input', saveNotepad);
+notepadUI.clearBtn.addEventListener('click', () => {
+    notepadUI.text.value = '';
+    saveNotepad();
+    notepadUI.text.focus();
+});
+
+loadNotepad();
+
+/* ---------------- iPad: janelas flutuantes + barra de tarefas ------ */
+const ipadApps = {
+    terminal: document.getElementById('app-terminal'),
+    monitor:  document.getElementById('app-monitor'),
+    notas:    document.getElementById('app-notas'),
+    wifihack: document.getElementById('app-wifihack'),
+    wifi:     document.getElementById('app-wifi'),
+    contratos: document.getElementById('app-contratos'),
+    tutorial: document.getElementById('app-tutorial')
+};
+const desktopEl = document.getElementById('ipad-desktop');
+const iconsEl = document.getElementById('desktop-icons');
+
+// Icones pequenos (SVG chapado) usados na barra de titulo e na barra de tarefas.
+const APP_ICONS = {
+    terminal: '<svg viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="1.5" fill="#1d1f22" stroke="#9aa1a8"/><path d="M4 6l2.5 2L4 10" fill="none" stroke="#e8e8ea" stroke-width="1.3"/><path d="M8 10.5h4" stroke="#e8e8ea" stroke-width="1.3"/></svg>',
+    monitor:  '<svg viewBox="0 0 16 16"><path d="M8 1.5l5.5 2v4.2c0 3.2-2.3 5.6-5.5 6.8-3.2-1.2-5.5-3.6-5.5-6.8V3.5z" fill="#4a84c4" stroke="#9cc3ea"/><path d="M5.5 8l1.8 1.8L10.8 6" fill="none" stroke="#fff" stroke-width="1.3"/></svg>',
+    notas:    '<svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1" fill="#f0c04a" stroke="#b58a1d"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" stroke="#7a5a10"/></svg>',
+    wifihack: '<svg viewBox="0 0 16 16"><path d="M4.5 6.5a5 5 0 0 1 7 0M2.5 4.5a8 8 0 0 1 11 0" fill="none" stroke="#c778d6" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="9" r="1.5" fill="#c778d6"/><path d="M8 10.5V14.5" stroke="#c778d6" stroke-width="1.4"/></svg>',
+    wifi:     '<svg viewBox="0 0 16 16"><path d="M2 6.2a8.5 8.5 0 0 1 12 0M4.3 8.8a5.2 5.2 0 0 1 7.4 0" fill="none" stroke="#6fcf8e" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="12" r="1.4" fill="#6fcf8e"/></svg>',
+    contratos:'<svg viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9z" fill="#4aa3d8" stroke="#2a6f9a"/><path d="M9.5 1.5v3h3" fill="none" stroke="#2a6f9a"/><path d="M5.5 8h5M5.5 10.5h5M5.5 13h3" stroke="#fff" stroke-width="1"/></svg>',
+    tutorial: '<svg viewBox="0 0 16 16"><path d="M2 3.5c2-1 4-1 6 .5 2-1.5 4-1.5 6-.5v9c-2-1-4-1-6 .5-2-1.5-4-1.5-6-.5z" fill="#4a84c4" stroke="#9cc3ea"/><path d="M8 4v9" stroke="#9cc3ea"/></svg>'
+};
+document.querySelectorAll('[data-ico]').forEach(n => { n.innerHTML = APP_ICONS[n.dataset.ico] || ''; });
+
+// Posicao/tamanho inicial de cada janela, em fracao da area livre (abaixo da
+// fila de icones): [x, y, largura, altura]. Terminal + Monitor + Anotacoes
+// ficam lado a lado sem se sobrepor; os outros apps abrem por cima, como
+// pop-ups. Depois disso o jogador arrasta (pela barra de titulo) e
+// redimensiona (pelas bordas e cantos) como quiser, sempre dentro da tela.
+const DEFAULT_RECTS = {
+    terminal:  [0,     0,    0.495, 1],
+    monitor:   [0.505, 0,    0.495, 0.32],
+    notas:     [0.505, 0.34, 0.495, 0.66],
+    wifihack:  [0.06,  0.04, 0.42,  0.86],
+    wifi:      [0.52,  0.04, 0.38,  0.80],
+    contratos: [0.50,  0.04, 0.46,  0.76],
+    tutorial:  [0.22,  0.04, 0.52,  0.78]
+};
+const MIN_W = 260, MIN_H = 140;   // tamanho minimo de qualquer janela
+
+let openApps = [];   // ordem de empilhamento: o ultimo e o que esta na frente
+let zTop = 10;
+
+function isAppOpen(name) { return openApps.includes(name); }
+function topApp() { return openApps.length ? openApps[openApps.length - 1] : null; }
+
+function placeWindow(name) {
+    const node = ipadApps[name];
+    const r = desktopEl.getBoundingClientRect();
+    const [x, y, w, h] = DEFAULT_RECTS[name];
+    const M = 10;                                            // margem das bordas
+    const y0 = iconsEl.offsetTop + iconsEl.offsetHeight + 8; // logo abaixo dos icones
+    const regionW = r.width - 2 * M;
+    const regionH = r.height - y0 - M;
+    node.style.left   = Math.round(M + x * regionW) + 'px';
+    node.style.top    = Math.round(y0 + y * regionH) + 'px';
+    node.style.width  = Math.round(w * regionW) + 'px';
+    node.style.height = Math.round(h * regionH) + 'px';
+    clampWindow(name);
+}
+
+// Mantem a janela inteira dentro da tela do iPad (tamanho e posicao).
+function clampWindow(name) {
+    const win = ipadApps[name];
+    const dw = desktopEl.clientWidth, dh = desktopEl.clientHeight;
+    if (!dw || !dh) return;
+    let w = parseFloat(win.style.width)  || win.offsetWidth;
+    let h = parseFloat(win.style.height) || win.offsetHeight;
+    w = Math.min(Math.max(w, Math.min(MIN_W, dw)), dw);
+    h = Math.min(Math.max(h, Math.min(MIN_H, dh)), dh);
+    let l = parseFloat(win.style.left) || 0;
+    let t = parseFloat(win.style.top)  || 0;
+    l = Math.min(Math.max(l, 0), dw - w);
+    t = Math.min(Math.max(t, 0), dh - h);
+    win.style.left = Math.round(l) + 'px';  win.style.top    = Math.round(t) + 'px';
+    win.style.width = Math.round(w) + 'px'; win.style.height = Math.round(h) + 'px';
+}
+
+// Chamada tambem por setLayoutSize: trocar o tamanho do iPad reorganiza tudo.
+function placeAllWindows() {
+    Object.keys(ipadApps).forEach(placeWindow);
+}
+
+function renderIpadWindows() {
+    const top = topApp();
+    Object.entries(ipadApps).forEach(([name, node]) => {
+        node.classList.toggle('hidden', !isAppOpen(name));
+        node.classList.toggle('focused', name === top);
+    });
+    document.querySelectorAll('.desk-icon').forEach(btn => {
+        btn.classList.toggle('open', isAppOpen(btn.dataset.app));
+        btn.classList.toggle('focused', btn.dataset.app === top);
+    });
+}
+
+function focusAppInput(name) {
+    if (name === 'terminal') el.cmdline.focus();
+    else if (name === 'monitor') el2.cmdline.focus();
+    else if (name === 'notas') notepadUI.text.focus();
+    else if (name === 'wifihack') el3.cmdline.focus();
+}
+
+function bringToFront(name) {
+    if (!isAppOpen(name) || topApp() === name) return;
+    openApps = openApps.filter(a => a !== name);
+    openApps.push(name);
+    ipadApps[name].style.zIndex = ++zTop;
+    renderIpadWindows();
+}
+
+function openIpadApp(name) {
+    if (!ipadApps[name]) return;
+    if (!isAppOpen(name)) {
+        openApps.push(name);
+        ipadApps[name].style.zIndex = ++zTop;
+        renderIpadWindows();
+    } else {
+        bringToFront(name);
+    }
+    focusAppInput(name);
+}
+
+function closeIpadApp(name) {
+    openApps = openApps.filter(a => a !== name);
+    renderIpadWindows();
+}
+
+// Arrastar pela barra de titulo (nao arrasta ao clicar nos botoes _ e X).
+function initWindowDrag(name) {
+    const win = ipadApps[name];
+    const bar = win.querySelector('.app-topbar');
+
+    // Qualquer clique dentro da janela traz ela para a frente.
+    win.addEventListener('pointerdown', () => bringToFront(name), true);
+
+    bar.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || e.target.closest('button')) return;
+        const startX = e.clientX, startY = e.clientY;
+        const baseL = win.offsetLeft, baseT = win.offsetTop;
+        bar.setPointerCapture(e.pointerId);
+
+        const move = ev => {
+            const r = desktopEl.getBoundingClientRect();
+            let l = baseL + ev.clientX - startX;
+            let t = baseT + ev.clientY - startY;
+            l = Math.min(Math.max(l, 0), r.width  - win.offsetWidth);
+            t = Math.min(Math.max(t, 0), r.height - win.offsetHeight);
+            win.style.left = l + 'px';
+            win.style.top  = t + 'px';
+        };
+        const up = ev => {
+            bar.removeEventListener('pointermove', move);
+            bar.removeEventListener('pointerup', up);
+            bar.removeEventListener('pointercancel', up);
+            try { bar.releasePointerCapture(ev.pointerId); } catch (_) {}
+        };
+        bar.addEventListener('pointermove', move);
+        bar.addEventListener('pointerup', up);
+        bar.addEventListener('pointercancel', up);
+    });
+}
+Object.keys(ipadApps).forEach(initWindowDrag);
+
+// Redimensionar arrastando as bordas e os cantos. O tamanho minimo e o limite
+// da tela do iPad valem durante o arraste (a janela nunca sai da tela).
+function initWindowResize(name) {
+    const win = ipadApps[name];
+    ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach(dir => {
+        const handle = document.createElement('div');
+        handle.className = 'rz rz-' + dir;
+        win.appendChild(handle);
+
+        handle.addEventListener('pointerdown', e => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            const sx = e.clientX, sy = e.clientY;
+            const L = win.offsetLeft, T = win.offsetTop;
+            const W = win.offsetWidth, H = win.offsetHeight;
+            const dw = desktopEl.clientWidth, dh = desktopEl.clientHeight;
+            handle.setPointerCapture(e.pointerId);
+
+            const move = ev => {
+                const dx = ev.clientX - sx, dy = ev.clientY - sy;
+                let l = L, t = T, w = W, h = H;
+                if (dir.includes('e')) w = Math.min(Math.max(W + dx, MIN_W), dw - L);
+                if (dir.includes('s')) h = Math.min(Math.max(H + dy, MIN_H), dh - T);
+                if (dir.includes('w')) { l = Math.min(Math.max(L + dx, 0), L + W - MIN_W); w = L + W - l; }
+                if (dir.includes('n')) { t = Math.min(Math.max(T + dy, 0), T + H - MIN_H); h = T + H - t; }
+                win.style.left = l + 'px';  win.style.top    = t + 'px';
+                win.style.width = w + 'px'; win.style.height = h + 'px';
+            };
+            const up = ev => {
+                handle.removeEventListener('pointermove', move);
+                handle.removeEventListener('pointerup', up);
+                handle.removeEventListener('pointercancel', up);
+                try { handle.releasePointerCapture(ev.pointerId); } catch (_) {}
+            };
+            handle.addEventListener('pointermove', move);
+            handle.addEventListener('pointerup', up);
+            handle.addEventListener('pointercancel', up);
+        });
+    });
+}
+Object.keys(ipadApps).forEach(initWindowResize);
+
+// Se o iPad encolher (janela do navegador menor, outro tamanho), as janelas
+// sao puxadas de volta pra dentro da tela em vez de ficarem perdidas.
+if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => Object.keys(ipadApps).forEach(clampWindow)).observe(desktopEl);
+}
+
+// Icones da area de trabalho: abrem o app; se ja esta aberto, trazem pra frente.
+// (Para guardar uma janela, use o _ ou o X da barra de titulo.)
+document.querySelectorAll('.desk-icon').forEach(btn => {
+    btn.addEventListener('click', () => openIpadApp(btn.dataset.app));
+});
+// Botoes _ (minimizar) e X (fechar) de cada janela. O estado do app e
+// mantido nos dois casos, entao reabrir pelo icone volta igual.
+document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeIpadApp(btn.dataset.close));
+});
+
+// ESC fecha o app onde o jogador esta digitando; sem foco em nenhum campo,
+// fecha o que esta na frente. Cada janela tambem cancela suas proprias
+// coisas locais primeiro (ex.: prompt de senha) e para a propagacao, entao
+// isso so roda quando sobra algo pra fechar.
+function appOpenWithFocus() {
+    const active = document.activeElement;
+    if (active === el.cmdline) return 'terminal';
+    if (active === el2.cmdline) return 'monitor';
+    if (active === el3.cmdline) return 'wifihack';
+    if (active === notepadUI.text) return 'notas';
+    return null;
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || openApps.length === 0) return;
+    e.preventDefault();
+
+    const focused = appOpenWithFocus();
+    const target = (focused && isAppOpen(focused)) ? focused : topApp();
+    closeIpadApp(target);
+});
+
+renderIpadWindows();
+
+// Relogio simples no canto da area de trabalho, so estetico (horario real do dispositivo).
+const ipadClockEl = document.getElementById('ipad-clock');
+function updateIpadClock() {
+    const now = new Date();
+    ipadClockEl.textContent =
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+}
+updateIpadClock();
+setInterval(updateIpadClock, 15000);
+
+/* ---------------- boot ------------------------------------------- */
+
+setLayoutSize('grande');
+newSession('facil');
+state.difficulty = 'facil';
+doxxUI.diffFacil.classList.add('active');
+
+print2('Console de defesa online.', 'dim');
+print2('Tentar abrir pastas no terminal ao lado pode aumentar sua exposicao.', 'dim');
+print2('Digite help para ver as contramedidas disponiveis. TAB completa o comando.', 'dim');
+print2('');
+updateDoxxBar();
+doxxUI.diffLabel.textContent = `defesa: ${DIFFICULTIES.facil.label}`;
+
+print3('Console Wi-Fi Hack online.', 'dim');
+print3('Use airodump para escanear redes por perto. Digite help para ver os comandos.', 'dim');
+print3('');
+renderWifiApp();
+renderContractsApp();
+renderTutorialApp();
+
+// Combo inicial: Anotacoes + Monitor + Terminal (terminal por ultimo, fica na frente e com foco).
+['notas', 'monitor', 'terminal'].forEach(openIpadApp);
+</script>
+</body>
+</html>

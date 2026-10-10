@@ -25,10 +25,10 @@ function criarJanela() {
   });
   Menu.setApplicationMenu(null);
 
-  const arquivo = path.join(__dirname, 'app', 'index.html');
+  const arquivo = path.join(__dirname, 'index.html');
   if (!fs.existsSync(arquivo)) {
     mostrarErro(win, 'Arquivo do jogo nao encontrado', 'Esperado em:\n' + arquivo +
-      '\n\nA pasta "app" com o index.html precisa estar no repositorio antes de gerar o .exe.');
+      '\n\nO index.html precisa estar no repositorio antes de gerar o .exe.');
   } else {
     const tamanho = fs.statSync(arquivo).size;
     if (tamanho < 1000) {

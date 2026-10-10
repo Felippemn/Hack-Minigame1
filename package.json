@@ -17,7 +17,7 @@
     "productName": "Simulacao Hack",
     "files": [
       "main.js",
-      "app/**/*"
+      "index.html"
     ],
     "win": {
       "target": "portable",
