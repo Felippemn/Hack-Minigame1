@@ -2,8 +2,7 @@ const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-// Evita janela em branco em alguns PCs com problema de placa de video
-app.disableHardwareAcceleration();
+// (aceleracao de video ligada: o quarto 3D usa WebGL e precisa da placa de video)
 
 function mostrarErro(win, titulo, detalhe) {
   const html = '<body style="background:#0a0c10;color:#e6e6e6;font-family:sans-serif;padding:40px">' +
